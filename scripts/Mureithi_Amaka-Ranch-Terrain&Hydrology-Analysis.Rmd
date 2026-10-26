@@ -1,0 +1,7 @@
+---
+title: "Mureithi_Amaka-Ranch-Terrain&Hydrology-Analysis"
+author: "Isaac Nduta Mureithi"
+date: "2026-10-26"
+output: html_document
+---
+
