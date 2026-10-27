@@ -139,7 +139,7 @@ The pipeline must tolerate the file being empty on first run and re-ingest it in
 ```
 Mureithi_Amaka-Ranch-Terrain-Hydrology-Analysis/
 ├── README.md                         # Project overview + how to run
-├── CLAUDE.md                         # This brief (v2)
+├── DESCRIPTION.md                         # This brief (v2)
 ├── .gitignore                        # Excludes data/, outputs/, *.tif, *.Rproj.user
 ├── R/
 │   ├── 00_setup.R                    # pacman::p_load, local paths, wbt_init, season date helpers
