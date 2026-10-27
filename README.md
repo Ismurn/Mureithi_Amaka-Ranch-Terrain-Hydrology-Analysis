@@ -6,7 +6,7 @@ within the Tsavo Conservation Area and the Kasigau Corridor REDD+ project area.
 
 Use of this code is licensed under [GNU GPL v3](LICENSE).
 
-Contact: Isaac Nduta Mureithi (AWF / OPALS, University of Exeter) - *email to be added*.
+Contact: Isaac Nduta Mureithi (African Wildlife Foundation) - *IMureithi@awf.org*.
 
 Citation: *to be added once a report or paper exists.*
 
