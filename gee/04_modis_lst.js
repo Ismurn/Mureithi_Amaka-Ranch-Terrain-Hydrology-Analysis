@@ -16,7 +16,7 @@
  *   modis_lst_day_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif    band lst_day_C_<SEASON>_<year>
  *   modis_lst_night_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif  band lst_night_C_<SEASON>_<year>
  *
- * SEASON FILTERS (CLAUDE.md section 2; months of the SAME calendar year)
+ * SEASON FILTERS (DESCRIPTION.md section 2; months of the SAME calendar year)
  *   ANNUAL Jan-Dec | LR Mar-May | SR Oct-Dec | DRY Jan-Feb + Jun-Sep
  *   An 8-day composite is assigned to the season of its START date (error <= 7 days).
  *   MOD11A2 starts Feb 2000, so the default start year is 2001 (first complete year).

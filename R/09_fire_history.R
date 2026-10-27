@@ -4,7 +4,7 @@
 # PURPOSE
 #   Burn count and most recent burn year on the 500 m MCD64A1 grid (2001-2024), the year-by-year fire record (burned
 #   area, MODIS active-fire detections) next to Hansen tree-cover loss, and the cross-tab of burned-and-lost versus
-#   unburned-and-lost woody loss that separates fire-associated loss from the rest (CLAUDE.md 6.7). Jones 2025: fire and
+#   unburned-and-lost woody loss that separates fire-associated loss from the rest (DESCRIPTION.md 6.7). Jones 2025: fire and
 #   megaherbivores act synergistically on tree mortality, so the two signatures have to be kept apart.
 #
 # INPUTS
@@ -22,7 +22,7 @@
 #
 # RUNTIME NOTES
 #   * A few seconds. Burned area is a 500 m product and Hansen loss a 30 m one: each 30 m pixel is assigned the burn history
-#     of the 500 m cell containing it (point-sampling a coarse layer at fine pixels, CLAUDE.md 9.2). Fire anywhere in a cell
+#     of the 500 m cell containing it (point-sampling a coarse layer at fine pixels, DESCRIPTION.md 9.2). Fire anywhere in a cell
 #     therefore tags every loss pixel in it, which overstates "burned-and-lost" and cannot see small fires.
 #   * "burned-and-lost" = a loss pixel whose cell burned in the loss year or up to Cfg.Fire.Loss.Window.Years before it.
 #     Only mature-tree pixels (Hansen treecover2000 >= Cfg.Tree.Mature.Pct) are counted as woody loss.

@@ -3,7 +3,7 @@
 # ==============================================================================
 # PURPOSE
 #   Min-max scaled stress index for the ANNUAL, DRY and LR seasons (weights from Cfg.Stress.Weights) and the recommendation
-#   zones of CLAUDE.md 6.8: A regeneration feasibility, B catchment interventions, C pan protection, D-wet / D-dry large-
+#   zones of DESCRIPTION.md 6.8: A regeneration feasibility, B catchment interventions, C pan protection, D-wet / D-dry large-
 #   herbivore comfort, E waterless retention buffer. Every pan also gets the woody-sacrifice counter-metric.
 #
 # INPUTS
@@ -36,7 +36,7 @@
 #     Zone D-wet = shrub + tree cover > Cfg.Zone.Cover.Min and TWI above the ranch median; D-dry = D-wet within Cfg.Zone.D.Dist.km
 #     of a FUNCTIONAL pan. Zone E = farther than Cfg.Zone.E.Dist.km from every functional pan, with that woody cover and RPI_now at or
 #     above the Cfg.Zone.E.Rpi.Q quantile.
-#   * The index is structural only (CLAUDE.md 9.9: non-structural pathways are >2x stronger in McCleery 2025) and daytime-biased
+#   * The index is structural only (DESCRIPTION.md 9.9: non-structural pathways are >2x stronger in McCleery 2025) and daytime-biased
 #     (9.8). Zone C never reads as "exclusion is good": the trade-off note travels with every row (McCleery 2025; Jones 2025).
 # ==============================================================================
 

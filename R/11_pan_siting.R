@@ -2,7 +2,7 @@
 # 11_pan_siting.R  -  Multi-criteria pan siting
 # ==============================================================================
 # PURPOSE
-#   Suitability surface from Cfg.Suit.Weights (CLAUDE.md 6.9), then the top Cfg.Siting.N candidate sites by non-maximum
+#   Suitability surface from Cfg.Suit.Weights (DESCRIPTION.md 6.9), then the top Cfg.Siting.N candidate sites by non-maximum
 #   suppression at >= Cfg.Siting.MinSpace.m spacing, each with its catchment, yield, water-gap gain, comfort gain, woody cost,
 #   distances and a one-line rationale. Existing non-functional pans get the same gap-gain numbers, so "build new" can be weighed
 #   against "restore what is there".
@@ -248,7 +248,7 @@ Run.Pan.Siting <- function(weights = Cfg.Suit.Weights, n.sites = Cfg.Siting.N, m
 }
 
 Siting.Result <- Run.Pan.Siting()
-if (nrow(Siting.Result$candidates) < Cfg.Siting.N) {          # the ranch is only ~6.5 x 7 km: fewer than N sites fit at the full spacing (CLAUDE.md 10: "adjust if ranch geometry is tight")
+if (nrow(Siting.Result$candidates) < Cfg.Siting.N) {          # the ranch is only ~6.5 x 7 km: fewer than N sites fit at the full spacing (DESCRIPTION.md 10: "adjust if ranch geometry is tight")
   message("\nOnly ", nrow(Siting.Result$candidates), " of ", Cfg.Siting.N, " sites fit at ", Cfg.Siting.MinSpace.m / 1000, " km: repeating at half the spacing as a clearly tagged alternative")
   Siting.Alt <- Run.Pan.Siting(min.space.m = Cfg.Siting.MinSpace.m / 2, tag = sprintf("_spacing_%gm", Cfg.Siting.MinSpace.m / 2))
 }

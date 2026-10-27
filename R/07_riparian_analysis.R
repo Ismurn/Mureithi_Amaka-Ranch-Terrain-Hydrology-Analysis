@@ -4,7 +4,7 @@
 # PURPOSE
 #   Buffer streams of Strahler order >= 2 by Cfg.Riparian.m (125 m) and report their vegetation condition
 #   separately from the rest of the ranch: riparian versus interior contrast for every vegetation layer,
-#   expressed against the ranch-wide median (CLAUDE.md 6.5). Rivers are the dominant baseline attractor for
+#   expressed against the ranch-wide median (DESCRIPTION.md 6.5). Rivers are the dominant baseline attractor for
 #   large mammals (Masiaine 2021), so riparian condition is reported on its own. Also a distance-to-stream
 #   gradient, which shows WHERE along a corridor the condition changes.
 #

@@ -4,7 +4,7 @@
 # PURPOSE
 #   Snap each stream-fed pan to the stream network, delineate its upslope catchment, compute seasonal catchment
 #   metrics, accessibility sheds (3 / 5 / 10 / 15 km), the ranch's water gap, refugia value, and the
-#   status-specific diagnostics of CLAUDE.md 6.6:
+#   status-specific diagnostics of DESCRIPTION.md 6.6:
 #     - existing_degraded pans: four failure-mode hypotheses, ranked by EO evidence,
 #     - the existing_functional_under_pressure pan: the demand it absorbs,
 #     - the existing_desilting pan: the PRE-INTERVENTION baseline for a 6 / 12 / 24 month re-run.

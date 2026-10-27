@@ -29,7 +29,7 @@ Every time-varying dataset is summarised for the **annual**, **long-rains (Mar-M
 satellite screening, the boundary is the coarse TTWCA polygon (20% below the listed size, two of the four located pans fall outside it), there is no ground
 truth, and the desilting dam has no coordinates yet.
 
-The full design brief, decisions and pitfalls are in [`CLAUDE.md`](CLAUDE.md). Differences found between the brief and
+The full design brief, decisions and pitfalls are in [`DESCRIPTION.md`](DESCRIPTION.md). Differences found between the brief and
 the data on disk, the decisions taken and the findings are logged in [`docs/known_issues.md`](docs/known_issues.md); the
 method is in [`docs/methodology.md`](docs/methodology.md).
 
@@ -88,7 +88,7 @@ Local inputs live on OneDrive and are declared in `R/00_setup.R`; they are catal
 
 | File | Description |
 |---|---|
-| *data/water_pans/water_pans.csv* | The five known pans (three degraded, one working under pressure, one being desilted without coordinates). Candidate sites are appended only on Isaac's confirmation (`Cfg.Siting.Append`). Schema in `CLAUDE.md` 3.3 plus `field_id`. |
+| *data/water_pans/water_pans.csv* | The five known pans (three degraded, one working under pressure, one being desilted without coordinates). Candidate sites are appended only on Isaac's confirmation (`Cfg.Siting.Append`). Schema in `DESCRIPTION.md` 3.3 plus `field_id`. |
 | *data/water_pans/amaka_field_points.csv* | Points from the field visit (GPS, elevation, notes, proposed pan status) and the dam centres read from imagery. |
 
 ---

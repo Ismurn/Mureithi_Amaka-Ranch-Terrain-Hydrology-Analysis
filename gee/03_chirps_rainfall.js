@@ -16,7 +16,7 @@
  *     one file per season, one band per year, band name  precip_mm_<SEASON>_<year>
  *     (EXPORT_MODE = 'per_year' gives one single-band file per year x season instead)
  *
- * SEASON FILTERS (CLAUDE.md section 2; months of the SAME calendar year)
+ * SEASON FILTERS (DESCRIPTION.md section 2; months of the SAME calendar year)
  *   ANNUAL Jan-Dec | LR Mar-May | SR Oct-Dec | DRY Jan-Feb + Jun-Sep
  *
  * REDUCER   SUM. The input is a daily depth in mm, so the season total is the sum

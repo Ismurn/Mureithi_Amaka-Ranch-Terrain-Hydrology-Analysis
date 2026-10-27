@@ -4,7 +4,7 @@
 # PURPOSE
 #   Condition the buffered DEM and derive the hydrological layers every later stage
 #   uses: breach, D8 / D-infinity flow, accumulation, streams, Strahler order, specific
-#   contributing area, slope, TWI, TPI, hillshade (CLAUDE.md 6.3). Also CALIBRATES the
+#   contributing area, slope, TWI, TPI, hillshade (DESCRIPTION.md 6.3). Also CALIBRATES the
 #   stream threshold (9.7) instead of accepting the starting value of 1000 cells.
 #
 # INPUTS
@@ -95,7 +95,7 @@ message(sprintf("  slope: median %.2f deg, 95th %.2f deg | TWI: median %.1f, ran
                 terra::global(Twi.R, "min", na.rm = TRUE)[[1]], terra::global(Twi.R, "max", na.rm = TRUE)[[1]]))
 
 
-# ---- PHASE 4: Stream threshold calibration (CLAUDE.md 9.7) ---------------------------
+# ---- PHASE 4: Stream threshold calibration (DESCRIPTION.md 9.7) ---------------------------
 # The threshold decides what counts as a stream. Three pieces of evidence for each candidate:
 #   (a) the dams: they are built on drainage lines, so the distance from each located pan to the
 #       nearest stream cell should be small;
@@ -209,7 +209,7 @@ readr::write_csv(Hydro.Summary, file.path(Dir.Out.Tables, "03_hydrology_summary.
 print(as.data.frame(Hydro.Summary), row.names = FALSE)
 
 # ---- PHASE 7b: Cell-level terrain table (keyed on the RPI-native analysis grid) ---------------------------
-# Fine rasters are aggregated into each ~460 m cell with area-weighted means (no resampling, CLAUDE.md 9.2);
+# Fine rasters are aggregated into each ~460 m cell with area-weighted means (no resampling, DESCRIPTION.md 9.2);
 # stream_frac = share of the cell covered by stream cells, acc_max = largest D8 upslope area in the cell.
 log_phase("PHASE 7b: cell-level terrain table")
 
@@ -251,7 +251,7 @@ Fig.Calib <- ggplot2::ggplot(Calib.Plot, ggplot2::aes(threshold_cells, value)) +
   ggplot2::geom_line(colour = "grey40") + ggplot2::geom_point(size = 2.5, colour = "#08306b") +
   ggplot2::geom_vline(xintercept = Cfg.Stream.Threshold, linetype = "dashed", colour = "firebrick") +
   ggplot2::scale_x_log10(breaks = Cfg.Stream.Calib.Thresholds) + ggplot2::facet_wrap(~ metric, scales = "free_y", ncol = 1) +
-  ggplot2::labs(x = "Stream threshold (D8 cells, log scale)", y = NULL, title = "Stream-threshold calibration (CLAUDE.md 9.7)",
+  ggplot2::labs(x = "Stream threshold (D8 cells, log scale)", y = NULL, title = "Stream-threshold calibration (DESCRIPTION.md 9.7)",
                 subtitle = "Dashed line = threshold used") + ggplot2::theme_minimal(base_size = 11)
 ggplot2::ggsave(file.path(Dir.Out.Figures, "03_stream_calibration.png"), Fig.Calib, width = 6, height = 7, dpi = 170)
 message("  wrote 03_streams_check_map.png and 03_stream_calibration.png")

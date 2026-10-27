@@ -4,7 +4,7 @@
 # PURPOSE
 #   Zonal statistics, spatial pattern and pixel-wise Theil-Sen trends of RPI (and of actual and
 #   potential GPP) inside Amaka; flag "degrading" pixels; stratify by TWI quintile; cross-check
-#   against the independent MODIS vegetation indices (CLAUDE.md 3.2, 6.4).
+#   against the independent MODIS vegetation indices (DESCRIPTION.md 3.2, 6.4).
 #
 # INPUTS
 #   Path.RPI, Path.RPI.GPP.Act, Path.RPI.GPP.Pot, Path.RPI.TempPerf   (native grid, 2000-2022)
@@ -20,7 +20,7 @@
 #
 # RUNTIME NOTES
 #   * Seconds. RPI v2 has 23 layers, 2000-2022 (not 2000-2023 as in the brief).
-#   * Everything stays on the RPI native grid (the target grid of CLAUDE.md 9.2); no resampling.
+#   * Everything stays on the RPI native grid (the target grid of DESCRIPTION.md 9.2); no resampling.
 #   * "Degrading" = Theil-Sen slope < 0 with Mann-Kendall p < Cfg.Degrade.P (0.1), per cell.
 #   * RPI_now (used by the stress index) = mean of Cfg.RPI.Now.Years (2020-2022) to damp single-year noise.
 #   * Land-cover stratification is done in 06 (it needs the 10 m land cover); TWI quintiles are done here.
@@ -63,7 +63,7 @@ zonal_multi <- function(r, label) {
 }
 Zonal.Annual <- dplyr::bind_rows(zonal_multi(Rpi, "rpi"), zonal_multi(Gpp.Act, "gpp_actual"), zonal_multi(Gpp.Pot, "gpp_potential")) |>
   dplyr::arrange(variable, year)
-stopifnot("pivot_wider produced list columns (CLAUDE.md 9.5)" = !any(vapply(Zonal.Annual, is.list, logical(1))))
+stopifnot("pivot_wider produced list columns (DESCRIPTION.md 9.5)" = !any(vapply(Zonal.Annual, is.list, logical(1))))
 readr::write_csv(Zonal.Annual, file.path(Dir.Out.Tables, "rpi_zonal_annual.csv"))
 print(as.data.frame(Zonal.Annual |> dplyr::filter(variable == "rpi", year %in% c(2000, 2005, 2010, 2015, 2020, 2022)) |>
                       dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, 3)))), row.names = FALSE)

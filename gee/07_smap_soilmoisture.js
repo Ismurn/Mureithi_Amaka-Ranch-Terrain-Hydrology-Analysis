@@ -17,7 +17,7 @@
  *   smap_rootzone_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif   band sm_rootzone_<SEASON>_<year>
  *   smap_surface_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif    band sm_surface_<SEASON>_<year>
  *
- * SEASON FILTERS (CLAUDE.md section 2; months of the SAME calendar year)
+ * SEASON FILTERS (DESCRIPTION.md section 2; months of the SAME calendar year)
  *   ANNUAL Jan-Dec | LR Mar-May | SR Oct-Dec | DRY Jan-Feb + Jun-Sep
  *   SMAP L4 starts 31 Mar 2015, so the default start year is 2016 (first complete year).
  *

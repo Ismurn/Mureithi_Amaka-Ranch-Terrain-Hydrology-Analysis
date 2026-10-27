@@ -16,7 +16,7 @@
  *   modis_ndvi_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif   band ndvi_<SEASON>_<year>
  *   modis_evi_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif    band evi_<SEASON>_<year>
  *
- * SEASON FILTERS (CLAUDE.md section 2; months of the SAME calendar year)
+ * SEASON FILTERS (DESCRIPTION.md section 2; months of the SAME calendar year)
  *   ANNUAL Jan-Dec | LR Mar-May | SR Oct-Dec | DRY Jan-Feb + Jun-Sep
  *   A 16-day composite is assigned to the season of its START date (error <= 15 days).
  *   MOD13Q1 starts Feb 2000, so the default start year is 2001 (first complete year).

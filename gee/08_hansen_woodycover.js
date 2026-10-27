@@ -8,7 +8,7 @@
  *
  * PURPOSE
  *   (1) Woody-cover baseline and tree-cover loss (elephant / fire impact signature and the
- *       "woody sacrifice zone" counter-metric, CLAUDE.md 6.7-6.8).
+ *       "woody sacrifice zone" counter-metric, DESCRIPTION.md 6.7-6.8).
  *   (2) 10 m ESA WorldCover land cover: the SOURCE of within-ranch land-cover structure (tree /
  *       shrub / grass / bare fractions, shrub-to-tree ratio, bare-and-wet Zone A). Decision of
  *       2026-10-26: the 500 m study pixels are ~97% shrubland over Amaka and stay as the

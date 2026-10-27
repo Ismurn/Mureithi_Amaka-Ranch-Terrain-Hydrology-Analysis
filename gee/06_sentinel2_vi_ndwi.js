@@ -9,7 +9,7 @@
  * PURPOSE
  *   Fine-scale greenness (NDVI), surface-water signal (NDWI) and a bare-soil index (BSI) at
  *   10 m: current state of pans and riparian strips, the imagery against which the stream
- *   threshold is calibrated (CLAUDE.md 9.7), and - with ESA WorldCover (08) - the source of
+ *   threshold is calibrated (DESCRIPTION.md 9.7), and - with ESA WorldCover (08) - the source of
  *   within-ranch land-cover structure (bare fraction, Zone A). The 500 m study pixels are
  *   ~97% shrubland over Amaka, so they carry almost no within-ranch signal (known_issues D5).
  *   Run 01_amaka_boundary_export.js first.
@@ -25,7 +25,7 @@
  *   s2_ndwi_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif   band ndwi_<SEASON>_<year>
  *   s2_bsi_mean_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif    band bsi_<SEASON>_<year>
  *
- * SEASON FILTERS (CLAUDE.md section 2; months of the SAME calendar year)
+ * SEASON FILTERS (DESCRIPTION.md section 2; months of the SAME calendar year)
  *   ANNUAL Jan-Dec | LR Mar-May | SR Oct-Dec | DRY Jan-Feb + Jun-Sep
  *   Surface reflectance is only globally available from late 2018, so the default start
  *   year is 2019. Earlier years (2016-2018) are sparse; lower YEAR_START at your own risk.

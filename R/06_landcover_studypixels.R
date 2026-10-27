@@ -27,7 +27,7 @@
 #
 # RUNTIME NOTES
 #   * A minute or two (twelve 136 MB Sentinel-2 stacks). Class fractions use exactextractr "frac" on the
-#     native 10 m grid; nothing is resampled (CLAUDE.md 9.2).
+#     native 10 m grid; nothing is resampled (DESCRIPTION.md 9.2).
 #   * "High" is RELATIVE to the ranch (top quartile of AOI cells, Cfg.Relative.Q): absolute thresholds select
 #     nothing in a landscape that is almost entirely shrubland.
 #   * The shrub-to-tree ratio is undefined where tree cover is ~0; it is reported only where trees >= 1% of a

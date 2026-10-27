@@ -8,7 +8,7 @@
  *
  * PURPOSE
  *   Fire history, so fire-driven woody loss can be separated from likely elephant-driven
- *   loss (Jones 2025; CLAUDE.md 6.7): burn count per pixel, most recent burn year, burned-by-year
+ *   loss (Jones 2025; DESCRIPTION.md 6.7): burn count per pixel, most recent burn year, burned-by-year
  *   stack, and (optionally) MODIS active-fire detection counts.
  *   Run 01_amaka_boundary_export.js first.
  *

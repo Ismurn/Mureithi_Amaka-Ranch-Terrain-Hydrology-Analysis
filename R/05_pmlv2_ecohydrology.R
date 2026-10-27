@@ -3,7 +3,7 @@
 # ==============================================================================
 # PURPOSE
 #   Seasonal (LR / SR / DRY) and annual GPP, Ec, Es, Ei from the gee/09 export (calendar-year
-#   seasons, mean daily rates); ET = Ec + Es + Ei; WUE = GPP / ET; Ec/ET and Es/ET (CLAUDE.md 6.4).
+#   seasons, mean daily rates); ET = Ec + Es + Ei; WUE = GPP / ET; Ec/ET and Es/ET (DESCRIPTION.md 6.4).
 #   Es/ET is the bare-soil share of evapotranspiration and feeds the stress index. Also checks the
 #   units against the local annual stack (9.4) and builds the climate context: CHIRPS rainfall
 #   anomalies (z-score and SPI), SMAP soil moisture, MODIS land-surface temperature and NDVI / EVI.

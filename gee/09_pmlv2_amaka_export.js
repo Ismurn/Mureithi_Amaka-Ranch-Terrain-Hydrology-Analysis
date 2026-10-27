@@ -9,7 +9,7 @@
  * PURPOSE
  *   Seasonal GPP, Ec, Es and Ei. REQUIRED, not optional: the PML_V2 stack held locally
  *   (PML_V2_Kenya_Annual_Stack.tif) is annual only (80 layers = 4 variables x 2001-2020), so the
- *   dry-season Es/ET term of the stress index cannot be derived from it (CLAUDE.md 6.4, 6.8).
+ *   dry-season Es/ET term of the stress index cannot be derived from it (DESCRIPTION.md 6.4, 6.8).
  *   Run 01_amaka_boundary_export.js first.
  *
  * INPUTS
@@ -25,12 +25,12 @@
  *   pml_gpp_meanrate_<ANNUAL|LR|SR|DRY>_<y0>_<y1>.tif   band gpp_<SEASON>_<year>   (gC m-2 d-1)
  *   pml_ec_meanrate_...   pml_es_meanrate_...   pml_ei_meanrate_...   (mm d-1)
  *
- * SEASON FILTERS (CLAUDE.md section 2; months of the SAME calendar year)
+ * SEASON FILTERS (DESCRIPTION.md section 2; months of the SAME calendar year)
  *   ANNUAL Jan-Dec | LR Mar-May | SR Oct-Dec | DRY Jan-Feb + Jun-Sep
  *   An 8-day composite is assigned to the season of its START date (error <= 7 days).
  *
  * REDUCER
- *   MEAN of the daily RATES carried by the 8-day composites (CLAUDE.md 9.4: the reducer must
+ *   MEAN of the daily RATES carried by the 8-day composites (DESCRIPTION.md 9.4: the reducer must
  *   match the units). Season totals are rate x days in the season, done in R/05 (LR 92, SR 92,
  *   DRY 181-182, ANNUAL 365-366 days). Ratios such as Es/ET = Es / (Ec + Es + Ei) and WUE =
  *   GPP / ET do not depend on that factor, which is what the stress index uses.

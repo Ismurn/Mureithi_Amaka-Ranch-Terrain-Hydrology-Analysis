@@ -48,7 +48,7 @@ po/*~
 rsconnect/
 
 # ==============================================================================
-# Amaka pipeline (CLAUDE.md section 5): code, docs and small CSVs only.
+# Amaka pipeline (DESCRIPTION.md section 5): code, docs and small CSVs only.
 # Raw and derived data stay out of git; folders are kept with .gitkeep.
 # ==============================================================================
 data/**

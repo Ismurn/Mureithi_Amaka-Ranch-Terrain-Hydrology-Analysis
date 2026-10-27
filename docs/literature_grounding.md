@@ -1,6 +1,6 @@
 # Literature grounding
 
-Paper-by-paper mapping of analytical choices, mirroring `CLAUDE.md` section 13. Citations and findings are reproduced
+Paper-by-paper mapping of analytical choices, mirroring `DESCRIPTION.md` section 13. Citations and findings are reproduced
 from that brief and have **not** been independently re-checked against the papers. The last column is kept current as
 each section is implemented. No on-ranch calibration data exist (brief 9.10), so this mapping is the primary defence of
 the analytical choices.

@@ -1,6 +1,6 @@
 # Methodology
 
-Narrative method for the Amaka Ranch analysis, one section per stage. Section numbers in brackets refer to `CLAUDE.md`;
+Narrative method for the Amaka Ranch analysis, one section per stage. Section numbers in brackets refer to `DESCRIPTION.md`;
 `known_issues.md` records what the data did to the plan. Every stage has been run on the real data (2026-10-27).
 
 ## 1. Study area and area of interest [2, 6.1]

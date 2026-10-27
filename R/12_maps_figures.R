@@ -4,7 +4,7 @@
 # PURPOSE
 #   Report-ready maps and charts with stable file names (embedded by analysis/Amaka_Analysis.Rmd): terrain, RPI, dry-season versus
 #   wet-season panels, riparian strips, per-pan catchment maps, the water gap, hypothesis scores, stress and recommendation zones.
-#   tmap for maps, ggplot2 for charts; hillshade underlay on every map (CLAUDE.md 6.10).
+#   tmap for maps, ggplot2 for charts; hillshade underlay on every map (DESCRIPTION.md 6.10).
 #
 # INPUTS
 #   everything under outputs/ (rasters, tables, shapefiles) written by R/01-R/11
@@ -17,7 +17,7 @@
 #
 # RUNTIME NOTES
 #   * About a minute. Each figure is built inside build(), so one failing figure is reported at the end instead of stopping the rest.
-#   * Palettes: scico roma (RPI), davos (ET), lajolla (stress), batlow (TWI), vik (diverging, suitability) - CLAUDE.md 6.10.
+#   * Palettes: scico roma (RPI), davos (ET), lajolla (stress), batlow (TWI), vik (diverging, suitability) - DESCRIPTION.md 6.10.
 #   * Maps are cropped to the AOI plus a margin; coarse products (RPI 463 m, PML 500 m) are drawn as the blocks they are.
 #     Stress and zone maps are masked to the AOI because they are scaled against the ranch and mean nothing outside it.
 #   * Dry and wet panels of a variable share one colour scale, so the seasons can be compared by eye.
