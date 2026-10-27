@@ -1,10 +1,8 @@
-# ==============================================================================
 # 00_setup.R  -  Amaka Ranch Terrain, Hydrology & Vegetation Analysis
-# ==============================================================================
 # PURPOSE
 #   Single entry point every other script sources. Loads packages, resolves the
 #   project root, holds ALL local file paths (so no other script hard-codes a
-#   Windows path), holds the run configuration (CLAUDE.md section 10 defaults),
+#   Windows path), holds the run configuration (DESCRIPTION.md section 10 defaults),
 #   defines the season helpers (section 2) and initialises WhiteboxTools.
 #
 # INPUTS
@@ -25,10 +23,9 @@
 #     environment variable AMAKA_DATASETS_DIR (e.g. in ~/.Renviron).
 #   * Other scripts start with:  if (!exists("Setup.Loaded")) source("R/00_setup.R")
 #   * First run installs missing packages (pacman) and the WhiteboxTools binary.
-# ==============================================================================
 
 
-# ---- PHASE 1: Packages -------------------------------------------------------
+# PHASE 1: Packages 
 # House convention: pacman::p_load only, no library() chains.
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
 
@@ -38,11 +35,11 @@ pacman::p_load(
 )
 
 # terra::extract() is masked by tidyr::extract() once tidyverse is attached.
-# Scripts must call terra::extract() explicitly (CLAUDE.md section 9.2 workflow).
+# Scripts must call terra::extract() explicitly (DESCRIPTION.md section 9.2 workflow).
 tmap::tmap_mode("plot")
 
 
-# ---- PHASE 2: Project root and folders --------------------------------------
+# PHASE 2: Project root and folders
 find_project_root <- function(start = getwd()) {
   d <- normalizePath(start, winslash = "/", mustWork = TRUE)
   repeat {
@@ -87,7 +84,7 @@ for (d in c(Dir.Boundary, Dir.Boundary.Ctx, Dir.DEM, Dir.GEE.Exports, Dir.Pans,
 }
 
 
-# ---- PHASE 3: Local input paths  (EDIT HERE ONLY) ----------------------------
+# PHASE 3: Local input paths  (EDIT HERE ONLY) 
 # Everything below sits on OneDrive; nothing is copied into the repository.
 Dir.Datasets <- Sys.getenv(
   "AMAKA_DATASETS_DIR",
@@ -107,14 +104,14 @@ Path.TsavoWest    <- file.path(Dir.Datasets, "WDPA_Amboseli_Tsavo", "National Pa
                                "WDPA_WDOECM_Apr2025_Public_19564_shp-polygons.shp")
 Path.Kenya.Admin1 <- file.path(Dir.Datasets, "Country_Borders", "kenya_regional_admin1_boundary_wgs84.shp")
 
-# -- RPI v2 (Guy Lomax; East Africa, 0.004167 deg, 23 annual layers 2000-2022) --
+# RPI v2 (Guy Lomax; East Africa, 0.004167 deg, 23 annual layers 2000-2022)
 Dir.RPI.Src       <- file.path(Dir.Datasets, "RPI Datasets (GuyLomax)")
 Path.RPI          <- file.path(Dir.RPI.Src, "rpi_ea_v2.tif")                    # rpi.2000 ... rpi.2022
 Path.RPI.GPP.Act  <- file.path(Dir.RPI.Src, "actual_gpp_ea_v2.tif")             # GPP.2000 ... GPP.2022
 Path.RPI.GPP.Pot  <- file.path(Dir.RPI.Src, "potential_gpp_ea_v2.tif")          # potential_gpp_predicted.2000 ...
 Path.RPI.TempPerf <- file.path(Dir.RPI.Src, "rpi_ea_temporal_performance.tif")  # mae, rmse, rsq
 
-# -- PML_V2 and study pixels (Kenya, 0.004492 deg ~ 500 m, WGS84) --
+# PML_V2 and study pixels (Kenya, 0.004492 deg ~ 500 m, WGS84)
 Dir.PML.Src       <- file.path(Dir.Datasets, "PMLv2_and_IGBPpixels")
 # 80 layers <i>_<GPP|Ec|Es|Ei>_<2001..2020>. Each is a SUM of ~45 8-day composites of daily RATES
 # (CAS/IGSNRR/PML/V2_v017) over a Sep-Aug hydrological year, so x 8 gives mm or gC m-2 per year.
@@ -124,19 +121,19 @@ Path.PML.Mean     <- file.path(Dir.PML.Src, "PML_V2_Kenya_Drive_Export.tif")    
 Path.StudyPixels  <- file.path(Dir.PML.Src, "studyPixels_Kenya_Export.tif")     # igbp, trees, shrubland, grassland, bare, allRangelands
                                                                                 # Kenya-wide BASELINE only: ~97% shrubland over Amaka (known_issues D5)
 
-# -- 10 m land cover for within-ranch structure: exported by gee/08, downloaded to data/gee_exports/ --
+# 10 m land cover for within-ranch structure: exported by gee/08, downloaded to data/gee_exports/
 Path.WorldCover     <- file.path(Dir.GEE.Exports, "worldcover_2021_envelope.tif")      # ESA WorldCover v200 (2021), band Map
 Path.WorldCover.V100 <- file.path(Dir.GEE.Exports, "worldcover_2020_v100_envelope.tif") # optional: the version behind the study pixels
 
-# -- Project-side files --
+# Project-side files
 Path.Pans         <- file.path(Dir.Pans, "water_pans.csv")
 Path.FieldPoints  <- file.path(Dir.Pans, "amaka_field_points.csv")              # iPhone-GPS visit, 7 located points
 Path.Amaka.UTM    <- file.path(Dir.Boundary, "Amaka_Ranch.shp")                 # canonical AOI (EPSG:32737), written by 01
 Path.Amaka.WGS84  <- file.path(Dir.Boundary, "Amaka_Ranch_wgs84.shp")           # mapping / GEE upload (EPSG:4326)
 
 
-# ---- PHASE 4: Run configuration  (CLAUDE.md section 10 defaults) -------------
-# Coordinate reference systems --------------------------------------------------
+# PHASE 4: Run configuration  (DESCRIPTION.md section 10 defaults)
+# Coordinate reference systems 
 Cfg.CRS.Geo     <- 4326L    # WGS84, mapping
 Cfg.CRS.Metric  <- 32737L   # WGS84 / UTM 37S, all metric operations
 Cfg.CRS.Arc1960 <- 21037L   # Arc 1960 / UTM 37S, the historic mis-tag (section 9.1)
@@ -150,7 +147,7 @@ Cfg.CRS.Arc1960 <- 21037L   # Arc 1960 / UTM 37S, the historic mis-tag (section 
 Cfg.Ranches.CRS.Assumed <- 32737L
 Cfg.CRS.Confirmed       <- TRUE
 
-# Area of interest ------------------------------------------------------------
+# Area of interest
 # Amaka Ranch and Conservancy is catalogued under its old name in the TTWCA file.
 Cfg.Amaka.Field <- "R_NAME"
 Cfg.Amaka.Names <- c("MUSAMITI", "AMAKA RANCH")   # first = what the file holds today
@@ -167,25 +164,25 @@ Cfg.AOI.Mode          <- "musamiti"
 Cfg.AOI.File          <- NA_character_
 Cfg.AOI.Listed.acres  <- 14815                    # TTWCA member list (ttwcakenya.com/our-members), for sanity checks
 
-# DEM (02) ------------------------------------------------------------------------
+# DEM (02) 
 Cfg.DEM.Source  <- "glo30"   # file = data/gee_exports/amaka_dem_<source>_envelope.tif ("glo30" | "fabdem" | "srtm")
 Cfg.DEM.Smooth  <- FALSE     # optional wbt_gaussian_filter(); record the choice, it changes TWI
 Cfg.DEM.Sigma   <- 1.0
 
-# Land cover (06, 10) --------------------------------------------------------------
+# Land cover (06, 10) 
 # Decision 2026-10-26: within-ranch structure (bare fraction, shrub:tree, Zone A) comes from 10 m
 # ESA WorldCover plus Sentinel-2 (BSI, NDVI); the 500 m study pixels are the Kenya-wide baseline only.
 Cfg.LC.Source <- "worldcover10m"
 WorldCover.Classes <- c(trees = 10L, shrubland = 20L, grassland = 30L, cropland = 40L, builtup = 50L,
                         bare = 60L, water = 80L, herbaceous_wetland = 90L, mangroves = 95L)
 
-# Time windows ------------------------------------------------------------------
+# Time windows 
 Cfg.Years.RPI       <- 2000:2022   # rpi_ea_v2.tif has 23 layers (brief said 2000-2023)
 Cfg.Years.PML.Local <- 2001:2019   # local annual stack, full Sep-Aug years only (2020 looks partial)
 Cfg.PML.Composite.Days <- 8        # local annual layers x this = mm / gC m-2 per year
 Cfg.Years.GEE       <- 2000:2024   # default climate / vegetation exports
 
-# Hydrology (03, 07, 08) ----------------------------------------------------------
+# Hydrology (03, 07, 08) 
 Cfg.Stream.Threshold <- 2000       # D8 cells (1.8 km2). Calibrated in 03 (known_issues H1): the sparsest network that still
                                    # puts all four dams on a stream and keeps most of the riparian NDVI contrast (brief start value: 1000)
 Cfg.Riparian.m       <- 125        # 100-150 m
@@ -202,11 +199,11 @@ Cfg.Suit.Weights <- c(water_gap = 0.25, terrain = 0.20, zone_d_dry = 0.15, refug
 Cfg.Siting.N          <- 8
 Cfg.Siting.MinSpace.m <- 3000
 
-# Flags ------------------------------------------------------------------------
+# Flags 
 Cfg.Sterile.Ratio <- 5             # shrub:tree ratio threshold for "sterile landscape"
 Cfg.Degrade.P     <- 0.1           # Sen-slope significance for "degrading" pixels
 
-# Analysis parameters added when 02-12 were implemented (2026-10-27) -----------------------------
+# Analysis parameters added when 02-12 were implemented (2026-10-27) 
 # Years actually present in the GEE exports (calendar-year seasons, see docs/data_sources.md)
 Cfg.Years.PML.Seasonal <- 2001:2020   # gee/09 (the asset runs to Dec 2020)
 Cfg.Years.S2           <- 2019:2024   # gee/06
@@ -240,7 +237,7 @@ Cfg.Fire.Loss.Window.Years <- 1       # a Hansen loss pixel counts as "burned-an
 # Recommendation zones (10) and pan siting (11). All "high / low" cut-offs are relative to the ranch (Cfg.Relative.Q).
 Cfg.Stress.Clip        <- c(0.02, 0.98)   # stress terms are min-max scaled between these AOI percentiles (a few extreme pixels would otherwise
                                           # squash everything else); values outside are clamped to 0 / 1
-Cfg.Zone.Cover.Min     <- 0.25        # Zones D and E: shrub + tree cover fraction above this (CLAUDE.md 6.8)
+Cfg.Zone.Cover.Min     <- 0.25        # Zones D and E: shrub + tree cover fraction above this (DESCRIPTION.md 6.8)
 Cfg.Zone.D.Dist.km     <- 5           # Zone D-dry: within this distance of a functional pan
 Cfg.Zone.E.Dist.km     <- 10          # Zone E: farther than this from every functional pan (dry-season elephant reference is 10-15 km)
 Cfg.Zone.E.Rpi.Q       <- 0.25        # Zone E "acceptable RPI": RPI_now at or above this quantile of the ranch
@@ -258,7 +255,7 @@ Cfg.Terrain.Acc.Cells  <- c(300, 2000, 20000, 150000)         # D8 contributing 
 Cfg.Siting.Append      <- FALSE       # append candidate rows to water_pans.csv only after Isaac confirms
 
 
-# ---- PHASE 5: Season helpers (section 2) ------------------------------------
+# PHASE 5: Season helpers (section 2) 
 # LR  = Mar-May,  SR = Oct-Dec,  DRY = Jun-Sep + Jan-Feb of the SAME calendar year.
 # "ANNUAL" is the calendar year. The three seasons cover 12 months with no gap.
 Seasons.Def <- tibble::tibble(
@@ -290,7 +287,7 @@ season_months <- function(season) {
 }
 
 
-# ---- PHASE 6: Small shared helpers ------------------------------------------
+# PHASE 6: Small shared helpers 
 # Announce a phase in the console so long scripts are easy to follow.
 log_phase <- function(txt) message("\n== ", txt, " ", strrep("=", max(3, 70 - nchar(txt))))
 
@@ -316,7 +313,7 @@ write_shp <- function(x, path) {
 
 # Build the Amaka AOI (EPSG:32737) from the dissolved TTWCA Musamiti polygon, per Cfg.AOI.Mode
 # (see Phase 4). Returns list(geom, mode, src, label). A supplied file with no CRS is refused:
-# a CRS is never guessed (CLAUDE.md 9.1).
+# a CRS is never guessed (DESCRIPTION.md 9.1).
 build_aoi <- function(ttwca.geom, mode = Cfg.AOI.Mode, file = Cfg.AOI.File) {
   clean <- function(g) {
     g <- sf::st_make_valid(sf::st_union(sf::st_zm(g, drop = TRUE, what = "ZM")))
@@ -366,12 +363,12 @@ check_inputs <- function() {
 }
 
 
-# ---- PHASE 6b: Shared helpers for the analysis scripts (02-12) ---------------
-# -- Boundary / envelope ---------------------------------------------------------------------
+# PHASE 6b: Shared helpers for the analysis scripts (02-12) 
+# -- Boundary / envelope 
 read_aoi      <- function() sf::st_read(Path.Amaka.UTM, quiet = TRUE)
 read_envelope <- function() sf::st_read(file.path(Dir.Boundary, sprintf("Amaka_Envelope_%gkm.shp", Cfg.Buffer.m / 1000)), quiet = TRUE)
 
-# -- GEE exports (data/gee_exports/) -------------------------------------------------------------
+# GEE exports (data/gee_exports/) 
 # One seasonal stack: <prefix>_<SEASON>_<y0>_<y1>.tif, band names as exported (e.g. es_DRY_2001).
 gee_stack <- function(prefix, season = NULL) {
   pat <- if (is.null(season)) sprintf("^%s_[0-9]{4}_[0-9]{4}\\.tif$", prefix)
@@ -388,8 +385,8 @@ gee_file <- function(name) {
 # Year of each layer from its name: es_DRY_2001 -> 2001, rpi.2000 -> 2000, burned_2001 -> 2001
 layer_year <- function(r) as.integer(sub(".*[._]([0-9]{4})$", "\\1", if (is.character(r)) r else names(r)))
 
-# -- Scaling -----------------------------------------------------------------------------------
-# Min-max scale to [0, 1] (CLAUDE.md 6.8 / 6.9). A (nearly) constant layer is NOT stretched, because
+# Scaling 
+# Min-max scale to [0, 1] (DESCRIPTION.md 6.8 / 6.9). A (nearly) constant layer is NOT stretched, because
 # the stretch would only amplify noise: fractions already on [0, 1] are kept as they are
 # (already01 = TRUE); anything else becomes 0.5 with a warning. min.range = smallest span worth stretching.
 minmax01 <- function(x, already01 = FALSE, min.range = 0, label = "") {
@@ -428,7 +425,7 @@ scale_ref <- function(x, ref, clip = Cfg.Stress.Clip, min.range = 0.01, label = 
   terra::clamp((x - lim[1]) / diff(lim), 0, 1)
 }
 
-# -- Zonal statistics -----------------------------------------------------------------------------
+# Zonal statistics 
 # Area-weighted statistic of every layer of `r` inside each polygon (polygons are reprojected to the
 # raster CRS first). Returns one row per polygon, one column per layer.
 zonal_stat <- function(r, polys, fun = "mean") {
@@ -438,7 +435,7 @@ zonal_stat <- function(r, polys, fun = "mean") {
   if (terra::nlyr(r) == 1) names(out) <- names(r) else names(out) <- sub(paste0("^", fun, "\\."), "", names(out))
   tibble::as_tibble(out)
 }
-# Point-sample every layer of `r` at the analysis-cell centroids (CLAUDE.md 9.2: native grids, no resampling).
+# Point-sample every layer of `r` at the analysis-cell centroids (DESCRIPTION.md 9.2: native grids, no resampling).
 sample_cells <- function(r, cells, geo = FALSE) {
   xy <- if (geo) cbind(cells$lon, cells$lat) else cbind(cells$x, cells$y)
   v  <- terra::extract(r, xy)
@@ -446,7 +443,7 @@ sample_cells <- function(r, cells, geo = FALSE) {
   tibble::as_tibble(v)
 }
 
-# -- Analysis grid: the RPI native grid over the catchment envelope (CLAUDE.md 9.2) -----------------------
+# Analysis grid: the RPI native grid over the catchment envelope (DESCRIPTION.md 9.2)
 # Every cell-level table in the pipeline is keyed on cell_id from this grid. Cached on first use.
 cell_polygons <- function(g) {
   p <- sf::st_as_sf(terra::as.polygons(g, dissolve = FALSE))
@@ -482,7 +479,7 @@ get_analysis_grid <- function(refresh = FALSE) {
   list(grid = g, cells = cells)
 }
 
-# -- Pans ---------------------------------------------------------------------------------------------
+# Pans 
 # water_pans.csv joined with the image-read centres and stand-off uncertainty of the field file.
 # Start position = image-read centre where there is one, else the recorded coordinates.
 read_pans <- function() {
@@ -503,7 +500,7 @@ read_pans <- function() {
   p
 }
 
-# -- Tables --------------------------------------------------------------------------------------------
+# Tables
 # Minimal .xlsx writer (no extra package: only 'zip', which officer already brings in).
 write_xlsx_min <- function(df, path, sheet = "data") {
   if (!requireNamespace("zip", quietly = TRUE)) { warning("package 'zip' not available; not written: ", path, call. = FALSE); return(invisible(FALSE)) }
@@ -535,7 +532,7 @@ write_xlsx_min <- function(df, path, sheet = "data") {
 }
 
 
-# ---- PHASE 7: WhiteboxTools ---------------------------------------------------
+# PHASE 7: WhiteboxTools
 # Install the binary once, then point the R wrapper at it. wbt_init() reports
 # whether a working binary was found.
 .wbt.ok <- isTRUE(tryCatch(whitebox::wbt_init(check_version = FALSE), error = function(e) FALSE))
@@ -548,7 +545,7 @@ if (!.wbt.ok) warning("WhiteboxTools could not be initialised; 03_hydrology.R wi
 rm(.wbt.ok)
 
 
-# ---- PHASE 8: Report ----------------------------------------------------------
+# PHASE 8: Report 
 Inputs.Status <- check_inputs()
 if (!all(Inputs.Status$exists)) {
   message("00_setup.R: missing inputs (edit Phase 3 or set AMAKA_DATASETS_DIR):")
@@ -556,7 +553,7 @@ if (!all(Inputs.Status$exists)) {
 }
 if (!Cfg.CRS.Confirmed) {
   message("00_setup.R: Tsavo-shapefile CRS is UNCONFIRMED (assumed EPSG:", Cfg.Ranches.CRS.Assumed,
-          "). Run 01_boundary_prep.R and check the Google Earth overlay (CLAUDE.md 9.1).")
+          "). Run 01_boundary_prep.R and check the Google Earth overlay (DESCRIPTION.md 9.1).")
 }
 
 if (identical(Cfg.AOI.Mode, "musamiti")) {
