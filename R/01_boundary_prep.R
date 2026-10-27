@@ -1,9 +1,7 @@
-# ==============================================================================
 # 01_boundary_prep.R  -  Extract Amaka, verify CRS, build the catchment envelope
-# ==============================================================================
 # PURPOSE
 #   (1) Verify the coordinate system of the Tsavo ranch / settled-area shapefiles
-#       BEFORE anything is built on them (CLAUDE.md 9.1).
+#       BEFORE anything is built on them (DESCRIPTION.md 9.1).
 #   (2) Isolate Amaka Ranch and Conservancy from RanchesTTWCA.shp. The ranch is
 #       catalogued there under its old name, R_NAME == "MUSAMITI".
 #   (3) Build the AOI per Cfg.AOI.Mode: "musamiti" (current) is the TTWCA polygon exactly as
@@ -40,12 +38,11 @@
 #   * The CRS is NOT silently "fixed". Phase 2 gives numeric evidence; the
 #     decision is made by looking at the KML overlays in Google Earth, then
 #     setting Cfg.Ranches.CRS.Assumed / Cfg.CRS.Confirmed in 00_setup.R.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
 
-# ---- PHASE 1: Load source layers --------------------------------------------
+# PHASE 1: Load source layers 
 log_phase("PHASE 1: load source layers")
 
 Ranches.Raw <- sf::st_read(Path.Ranches,      quiet = TRUE)   # as delivered (file tag untouched)
@@ -76,7 +73,7 @@ as_utm37 <- function(geom, epsg.assumed) {
 }
 
 
-# ---- PHASE 2: CRS verification, part 1 - numeric edge test ------------------
+# PHASE 2: CRS verification, part 1 - numeric edge test 
 # Evidence, not proof. Where a ranch edge is also a park edge (many TTWCA ranches
 # abut Tsavo East / West), the ranch vertices should sit ON the WDPA park boundary
 # if the CRS assumption is right. Compare the two hypotheses on the SAME vertices.
@@ -138,7 +135,7 @@ readr::write_csv(dplyr::mutate(CRS.Edge.Test, n_fit_only_this_hypothesis = c(Dis
                  file.path(Dir.Out.Tables, "01_crs_np_edge_test.csv"))
 
 
-# ---- PHASE 3: Isolate Amaka (Musamiti) --------------------------------------
+# PHASE 3: Isolate Amaka (Musamiti) 
 log_phase("PHASE 3: isolate Amaka Ranch")
 
 Ranches.UTM <- sf::st_transform(read_tsavo_layer(Path.Ranches), Cfg.CRS.Metric)
@@ -202,7 +199,7 @@ Amaka.WGS84  <- sf::st_transform(Amaka.UTM, Cfg.CRS.Geo)
 Musamiti.UTM <- sf::st_sf(r_name = "MUSAMITI", geometry = Amaka.Geom.TTWCA)
 
 
-# ---- PHASE 3b: CRS verification, part 2 - Google Earth overlay --------------
+# PHASE 3b: CRS verification, part 2 - Google Earth overlay 
 # The decisive check. A datum mix-up is a (near) pure translation, so the distance
 # between two corners is unchanged and cannot reveal it; position can. Open both
 # KML files in Google Earth: the outline that sits on the real boundary features
@@ -250,7 +247,7 @@ message("  H1 vs H2 differ by ~", round(mean(CRS.Corner.Check$shift_m)),
         " m at Amaka. Anything above ~50 m means the tag must be settled before use (9.1).")
 
 
-# ---- PHASE 4: Buffered catchment envelope -----------------------------------
+# PHASE 4: Buffered catchment envelope 
 # Hydrology needs the upslope contributing area, so the DEM is clipped to the
 # bounding box of a buffer around the ranch, never to the ranch itself.
 log_phase("PHASE 4: buffered catchment envelope")
@@ -271,7 +268,7 @@ message(sprintf("  Envelope (EPSG:%d): x %.0f-%.0f, y %.0f-%.0f  (%.1f x %.1f km
                 (Envelope.BBox["ymax"] - Envelope.BBox["ymin"]) / 1000))
 
 
-# ---- PHASE 5: Write boundary + context layers -------------------------------
+# PHASE 5: Write boundary + context layers 
 log_phase("PHASE 5: write boundary and context layers")
 
 write_shp(Amaka.UTM,   Path.Amaka.UTM)
@@ -322,7 +319,7 @@ readr::write_csv(Boundary.Summary, file.path(Dir.Out.Tables, "01_boundary_summar
 print(t(Boundary.Summary))
 
 
-# ---- PHASE 6: Refresh the GEE boundary block --------------------------------
+# PHASE 6: Refresh the GEE boundary block 
 # gee/01_amaka_boundary_export.js carries the AOI as literal coordinates between two
 # marker comments, so the boundary asset in GEE is built from this exact geometry
 # (no manual shapefile upload). Everything outside the markers is left untouched.
@@ -359,7 +356,7 @@ update_gee_boundary <- function(js.path, geom.wgs84, area.ha, aoi) {
 update_gee_boundary(file.path(Dir.GEE, "01_amaka_boundary_export.js"), Amaka.WGS84, Amaka.Area.ha, AOI)
 
 
-# ---- PHASE 7: CRS verification figure ---------------------------------------
+# PHASE 7: CRS verification figure 
 log_phase("PHASE 7: CRS verification figure")
 
 Hyp.Lines <- sf::st_sf(
@@ -392,7 +389,7 @@ tmap::tmap_save(tmap::tmap_arrange(Map.Overview, Map.Zoom, ncol = 2), Fig.Path,
 message("  wrote ", basename(Fig.Path))
 
 
-# ---- PHASE 7b: AOI figure ----------------------------------------------------
+# PHASE 7b: AOI figure 
 # The picture to look at when judging the AOI: the AOI, the TTWCA Musamiti polygon, the
 # neighbouring Kambanga polygon, and the field points (how many fall outside the AOI).
 log_phase("PHASE 7b: AOI figure")
@@ -431,7 +428,7 @@ tmap::tmap_save(Map.AOI, Fig.AOI.Path, width = 9, height = 7, dpi = 200)
 message("  wrote ", basename(Fig.AOI.Path))
 
 
-# ---- PHASE 8: Hand-over message ----------------------------------------------
+# PHASE 8: Hand-over message 
 log_phase("DONE")
 message("Amaka AOI (", AOI$mode, "): ", sprintf("%.0f ha", Amaka.Area.ha), " | envelope ", Buffer.km, " km | CRS ",
         ifelse(Cfg.CRS.Confirmed, "CONFIRMED", "UNCONFIRMED"), " (assumed EPSG:", Cfg.Ranches.CRS.Assumed, ")")
