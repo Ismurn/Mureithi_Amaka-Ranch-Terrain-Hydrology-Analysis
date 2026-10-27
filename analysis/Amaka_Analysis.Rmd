@@ -1,0 +1,459 @@
+---
+title: "Amaka Ranch - Terrain, Hydrology & Vegetation Analysis"
+subtitle: "Version 1: what the satellite data say about the water pans, the vegetation, and where new water could go"
+author: "Isaac Nduta Mureithi"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  word_document:
+    toc: true
+    number_sections: true
+knit: (function(input, ...) {
+    root <- dirname(dirname(normalizePath(input)));
+    rmarkdown::render(
+      input,
+      output_file = file.path(root, "outputs", "reports", "Amaka_Hydro_Veg_Report_v1.docx"),
+      envir = globalenv())
+  })
+---
+
+```{r root, include = FALSE}
+# root.dir only takes effect from the NEXT chunk, so it gets a chunk of its own.
+knitr::opts_knit$set(root.dir = normalizePath(".."))   # run from the repository root
+```
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 7, out.width = "100%")
+options(knitr.kable.NA = "-")
+source("R/00_setup.R")
+
+# Everything quoted in the text is read from outputs/ at knit time, so the prose cannot drift from the tables.
+tb  <- function(f) readr::read_csv(file.path(Dir.Out.Tables, f), show_col_types = FALSE)
+fg  <- function(f) knitr::include_graphics(file.path(Dir.Out.Figures, f), rel_path = FALSE)
+f0  <- function(x) format(round(x), big.mark = ",", trim = TRUE)
+f1  <- function(x) format(round(x, 1), big.mark = ",", nsmall = 1, trim = TRUE)
+f2  <- function(x) format(round(x, 2), nsmall = 2, trim = TRUE)
+f3  <- function(x) format(round(x, 3), nsmall = 3, trim = TRUE)
+f4  <- function(x) format(round(x, 4), nsmall = 4, trim = TRUE)
+pc  <- function(x, d = 0) paste0(formatC(x, format = "f", digits = d), "%")        # x is already a percentage
+```
+
+```{r numbers, include = FALSE}
+Aoi.ha <- as.numeric(sf::st_area(sf::st_union(sf::st_geometry(read_aoi())))) / 1e4
+Bs  <- tb("01_boundary_summary.csv")
+Gap <- tb("water_gap_summary.csv");            gp <- function(r, col) Gap[[col]][Gap$radius_km == r]
+Ps  <- tb("pan_catchment_static.csv");         ps <- function(id, col) Ps[[col]][Ps$pan_id == id]
+Hy  <- tb("pan_hypothesis_scores.csv");        hy <- function(id, k, col = "score") Hy[[col]][Hy$pan_id == id & startsWith(Hy$hypothesis, paste0("H", k, " "))]
+Rh  <- tb("rehabilitation_gap_gain.csv");      rh <- function(id, col) Rh[[col]][Rh$pan_id == id]
+Dg  <- tb("pan_diagnostics.csv")
+Tr  <- tb("rpi_trend_summary.csv");            tr <- Tr[Tr$variable == "rpi", ]
+Cl  <- tb("climate_context_summary.csv");      cl <- function(ds, v, s, col) Cl[[col]][Cl$dataset == ds & Cl$variable == v & Cl$season == s]
+Pm  <- tb("pml_summary.csv");                  pm <- function(s, col) Pm[[col]][Pm$season == s]
+Lc  <- tb("landcover_fractions.csv");          lc <- function(i, col) Lc[[col]][i]
+Rs  <- tb("riparian_sets.csv");                rs <- function(s, col) Rs[[col]][Rs$set == s]
+Rc  <- tb("riparian_condition.csv");           rc <- function(m, s, col) Rc[[col]][Rc$metric == m & Rc$set == s]
+Fx  <- tb("fire_woody_loss_crosstab.csv");     fx <- function(scope, col) Fx[[col]][Fx$scope == scope]
+Fy  <- tb("fire_by_year.csv")
+Ss  <- tb("stress_summary.csv");               ss <- function(s, col) Ss[[col]][Ss$season == s]
+Tm  <- tb("stress_terms.csv")
+Zs  <- tb("recommendation_zone_summary.csv");  zs <- function(z, col) Zs[[col]][startsWith(Zs$zone, z)]
+Zc  <- tb("pan_stress_zoneC.csv")
+Cd  <- tb("candidate_pan_sites.csv");          Cd2 <- tb("candidate_pan_sites_spacing_1500m.csv")
+Cells <- get_analysis_grid()$cells; Cf <- tb("cells_fire.csv"); Cr <- tb("cells_rpi.csv"); Cv <- tb("cells_landcover.csv")
+Ia  <- Cells$cell_id[Cells$in_aoi]
+aoi.burned.pct <- 100 * mean(Cf$burn_count[match(Ia, Cf$cell_id)] > 0)
+aoi.notree <- sum(Cv$wc_trees[match(Ia, Cv$cell_id)] < 0.01); aoi.cells <- length(Ia)
+aoi.burn.yrs <- Fy$year[Fy$scope == "AOI" & Fy$burned_ha > 0]
+Cal <- tb("03_stream_threshold_calibration.csv"); Hyd <- tb("03_hydrology_summary.csv"); hyd <- function(k) Hyd$value[Hyd$item == k]
+Dv  <- tb("02_dem_vs_field_elevations.csv"); dem.rmse <- sqrt(mean(Dv$diff_recorded_m^2))
+Pans <- read_pans(); n.func <- sum(Pans$functional)
+Ct <- tb("cells_terrain.csv"); ranch.slope <- mean(Ct$slope_mean[match(Ia, Ct$cell_id)])
+# how far Zone E lies from each failed western pan (checked against the zone raster, not hard-coded)
+Zb <- terra::rast(file.path(Dir.Out.Rasters, "recommendation_zones_bitmask.tif")); Exy <- terra::xyFromCell(Zb, which(terra::values((Zb %/% 32) %% 2)[, 1] %in% 1))
+Pt <- sf::st_transform(sf::st_as_sf(dplyr::filter(Pans, located), coords = c("start_lon", "start_lat"), crs = Cfg.CRS.Geo, remove = FALSE), Cfg.CRS.Metric)
+e.dist <- function(id) { c0 <- sf::st_coordinates(Pt[Pt$pan_id == id, ]); sqrt((Exy[, 1] - c0[1])^2 + (Exy[, 2] - c0[2])^2) / 1000 }
+```
+
+# Read this first
+
+This is a **screening analysis from satellite data**. It can show where water, vegetation and terrain differ across Amaka. It cannot see walls, spillways, soils, grazing records or animals, and none of it has been checked on the ground. Four things limit how far the results can be pushed.
+
+1. **The boundary.** The analysis area is the TTWCA "Musamiti" polygon exactly as delivered: `r f0(Aoi.ha)` ha, about `r pc(abs(Bs$aoi_vs_listed_pct))` less than the 14,815 acres TTWCA lists for Amaka. Two of the four located pans (Mickles 1 and the working dam) lie outside it, `r f1(-ps("AMK_P03", "dist_to_boundary_m") / 1000)` and `r f1(-ps("AMK_P04", "dist_to_boundary_m") / 1000)` km beyond its edge, in the neighbouring Kambanga polygon. They are analysed anyway and flagged as outside.
+2. **Pan positions.** Except for the HQ and the scout posts, the iPhone points were taken from a stand-off position, so the pans were located by reading the dam centres from satellite imagery. The recorded coordinates are untouched and kept beside the image-read ones. About 50-150 m of position uncertainty remains.
+3. **No ground truth.** No exclosures, pan performance records or animal counts were available, so the results are not calibrated against anything on the ground.
+4. **A very uniform landscape.** About `r pc(100 * lc(3, "shrubland"))` of the ranch is shrubland, trees cover about `r pc(100 * lc(3, "trees"), 1)`, and no bare-ground class is mapped. Differences between places are small in absolute terms. The stress index and the recommendation zones rank places *relative to the rest of Amaka* and say nothing about absolute condition.
+
+# Summary
+
+The brief set three questions: why the existing pans are in their present state, what the pre-intervention baseline of the desilting dam is, and where new pans should go. The vegetation and fire analyses give the context for all three.
+
+## Diagnosing the existing pans
+
+**Among the five known pans and dams, only one holds water, and it sits outside the polygon.** Three do not hold water for long and one is being desilted. (Boreholes are not in the pan table and so are not counted; see the decisions at the end.) The working dam is north-east of the ranch. It reaches `r pc(100 * gp(5, "watered_by_functional_ha") / Aoi.ha)` of Amaka within 5 km, `r pc(100 * gp(10, "watered_by_functional_ha") / Aoi.ha)` within 10 km and all of it within 15 km. The south-west corner (`r f0(gp(10, "gap_functional_ha"))` ha, `r pc(gp(10, "gap_functional_pct"))` of the ranch) is more than 10 km from working water, and the failed HQ reservoir sits on its edge.
+
+**Why the pans fail** (screening evidence only; each score is 0.5 for a catchment typical of the ranch, and the working dam is scored by the same tests as a control):
+
+- *Mickles 1 (AMK_P03):* the catchment is small, `r f0(ps("AMK_P03", "catch_ha"))` ha against `r f0(ps("AMK_P04", "catch_ha"))` ha for the working dam (`r pc(100 * ps("AMK_P03", "catch_ha") / ps("AMK_P04", "catch_ha"))`). "Catchment too small to fill" has the strongest evidence (`r f2(hy("AMK_P03", 1))`, working dam `r f2(hy("AMK_P03", 1, "control_score"))`).
+- *Mickles 2 (AMK_P01):* the catchment is `r f0(ps("AMK_P01", "catch_ha"))` ha of steep ground (mean slope `r f1(ps("AMK_P01", "slope_mean_deg"))` degrees against `r f1(ranch.slope)` for the ranch). "Flashy runoff" scores `r f2(hy("AMK_P01", 3))` against `r f2(hy("AMK_P01", 3, "control_score"))` for the working dam, but the score comes from the slope and the low wetness index, **not** from poor vegetation (RPI `r f2(ps("AMK_P01", "rpi_now"))`, no worse than the ranch). "Siltation from overgrazing" scores `r f2(hy("AMK_P01", 2))`, so it is not supported.
+- *HQ rock-catchment reservoir (AMK_P02):* it is not a stream-fed dam, so the catchment hypotheses are not scored. Its image-read centre sits on a mapped channel that drains at least `r f0(ps("AMK_P02", "start_cell_upslope_ha"))` ha: either the structure lies on the river or the 30 m surface model cannot separate it from the channel. It needs a field visit.
+
+None of this can be confirmed from orbit. Wall integrity, spillway, leakage and sediment depth are invisible to satellites.
+
+## Monitoring the desilting dam
+
+**The pre-intervention baseline could not be computed**, because the Amaka dam being desilted (AMK_P05) has no coordinates. The script writes a marker file instead of a misleading table, and the baseline will be produced the moment coordinates are added (the code path was tested with a stand-in pan).
+
+## Siting new pans
+
+**Very little of the ranch is buildable, and the best sites sit beside the failed pans.** Applying the brief's terrain rules (a drainage line with a dam-sized catchment, outside Zone E, at least 300 m inside the boundary) leaves `r f0(Cd$eligible_area_ha[1])` ha, `r pc(100 * Cd$eligible_area_ha[1] / Aoi.ha, 1)` of the ranch. Only `r nrow(Cd)` candidate sites fit at the brief's 3 km spacing (`r nrow(Cd2)` at 1.5 km). Three of the four lie `r f1(min(Cd$nearest_pan_km[Cd$nearest_pan_km < 1.6]))`-`r f1(max(Cd$nearest_pan_km[Cd$nearest_pan_km < 1.6]))` km from a failed pan. Restoring AMK_P01 or AMK_P02 would bring water within 5 km of `r f0(rh("AMK_P01", "gap_ha_covered_5km"))` and `r f0(rh("AMK_P02", "gap_ha_covered_5km"))` ha of the `r f0(gp(5, "gap_functional_ha"))` ha that lacks it, comparable to the candidate sites (`r f0(min(Cd$newly_covered_gap_ha_5km))`-`r f0(max(Cd$newly_covered_gap_ha_5km))` ha). **Whether a structure holds water is a question of soil and design, so restoring or redesigning what exists should be weighed first.**
+
+## Vegetation, fire and the stress index
+
+- **No trend in vegetation condition.** The Rangeland Productivity Index (RPI) shows no significant trend over 2000-2022 (Sen slope `r f4(tr$sen_slope_per_year)` per year, Mann-Kendall p = `r f2(tr$mk_p)`); `r pc(tr$aoi_cells_degrading_pct, 1)` of cells are degrading and `r pc(tr$aoi_cells_improving_pct, 1)` improving.
+- **Fire is rare and does not explain most woody loss.** Only `r pc(aoi.burned.pct)` of the ranch's cells burned in 2001-2024 (in `r paste(aoi.burn.yrs, collapse = " and ")`), and nothing has been mapped since 2008. Where fire does occur, mature trees are lost `r f0(fx("envelope", "exposure_rate_ratio"))` times faster per exposed pixel-year, yet only `r pc(fx("envelope", "burned_and_lost_pct"))` of mature-tree loss pixels around Amaka coincide with a burn. The rest is not fire; elephants are one candidate, but charcoal, clearing and drought look the same from orbit.
+- **The stress index ranks places, not seasons.** The dry-season and long-rains surfaces correlate at `r f2(ss("DRY", "cor_with_LR"))` and differ by `r f3(ss("DRY", "aoi_mean") - ss("LR", "aoi_mean"))` on average, so the structural index barely changes between seasons. Zone C (pan protection) is empty: no pan catchment is both in the top quartile of stress and losing productivity.
+
+## What to do next
+
+1. **Visit the three failed pans** before spending on any of them, and look for the failure mode on the structure itself (wall, spillway, leakage, siltation).
+2. **Get coordinates for the desilting dam** (GPS, or read from imagery) so the baseline can be taken.
+3. **Decide whether restoring AMK_P01 and AMK_P02 comes before new construction.** The analysis points that way, but only a site inspection can say whether they can be made to hold water.
+4. **Treat the single working dam as a risk.** If it fails, no working water is left within 15 km of any part of Amaka.
+
+The decisions and data still needed from you are listed at the end of the report.
+
+# Study area, data and methods
+
+## The area and its boundary
+
+```{r aoi-figure, fig.cap = "The Amaka analysis area (orange: the TTWCA Musamiti polygon as delivered), the neighbouring Kambanga polygon (yellow) and the seven field points. PT05, PT06 and PT07 fall in Kambanga."}
+fg("01_aoi.png")
+```
+
+```{r boundary-table}
+knitr::kable(data.frame(Item = c("Analysis area (polygon geometry)", "Area TTWCA lists for Amaka", "Analysis area against listed area", "Polygon vertices", "Catchment envelope", "Coordinate system"),
+                        Value = c(paste(f0(Bs$area_ha_geometry), "ha"), paste(f0(Bs$area_ha_listed_ttwca), "ha (14,815 acres)"), pc(Bs$aoi_vs_listed_pct, 1), Bs$n_vertices,
+                                  paste0(Bs$buffer_m / 1000, " km around the ranch"), "WGS84 / UTM zone 37S (EPSG:32737)")), caption = "Study area summary.")
+```
+
+The polygon is coarse (five vertices). Two caveats follow from it. First, the automated test of the Tsavo shapefiles' coordinate system was **inconclusive**: if they were really Arc 1960 / UTM 37S, everything would shift by about `r f0(Bs$h1_h2_shift_m)` m. The coordinate system was confirmed by overlaying the boundary on satellite imagery, where the offset is not visible. Second, three of the seven field points (the Mickles 1 dam, the east scout post and the working dam) fall outside the polygon. The polygon was kept as delivered because replacing it with a hull of the field points made the boundary look wrong; the analysis switches to a better boundary by setting `Cfg.AOI.Mode` to "file".
+
+## Data
+
+| Layer | Source | Resolution | Period | Used for |
+|---|---|---|---|---|
+| Elevation | Copernicus GLO-30 (a surface model) | 30 m | static | streams, wetness, slope, catchments |
+| Rangeland Productivity Index | RPI v2 (Lomax) | ~460 m | 2000-2022, annual | vegetation trend and condition |
+| Evapotranspiration, GPP | PML-V2 | 500 m | 2001-2020, 8-day | seasonal water use, bare-soil share of ET |
+| Rainfall | CHIRPS | ~5 km | 2000-2024 | seasons, drought years |
+| Vegetation indices | MODIS (250 m) and Sentinel-2 (10 m) | 10-250 m | 2001-2024; 2019-2024 | greenness, bare soil, wetness |
+| Soil moisture, land-surface temperature | SMAP L4; MODIS day LST | ~9 km; 1 km | 2016-2024; 2001-2024 | catchment context |
+| Land cover | ESA WorldCover v200 | 10 m | 2021 | shrub, tree and grass fractions |
+| Tree cover and loss | Hansen Global Forest Change v1.11 | 30 m | 2000; loss 2001-2023 | woody cover, woody loss |
+| Fire | MODIS MCD64A1 burned area; MODIS active fire | 500 m; 1 km | 2001-2024 | burn history |
+| Boundaries | TTWCA ranches, Settled Areas, Tsavo NPs | vector | - | context, distances |
+
+Seasons follow the brief: **long rains** March-May, **short rains** October-December, **dry** June-September plus January-February, with calendar-year aggregates. Every cell-level table is keyed to the RPI grid (about 460 m); fine layers are averaged over each cell and coarse layers are sampled at its centre, with no resampling. The 30 m DEM grid is used for hydrology, the stress surface, the zones and the siting. "High" and "low" always mean the top or bottom quartile of Amaka itself.
+
+# Terrain and hydrology
+
+The DEM agrees with the phones' altitudes to within a few metres (RMSE `r f1(dem.rmse)` m; the phone altitudes are themselves uncertain by several metres). Flow paths were derived after breaching depressions (the brief's choice, so real pans are not filled in). Amaka is nearly flat: mean slope `r f1(as.numeric(hyd("aoi_slope_deg_mean")))` degrees and 95% of the ranch below `r f1(as.numeric(hyd("aoi_slope_deg_p95")))` degrees, with the only relief in the hill at the north-west corner. The extracted network has `r f1(as.numeric(hyd("aoi_stream_km_all_orders")))` km of streams inside the ranch (`r f2(as.numeric(hyd("aoi_drainage_density_km_per_km2")))` km per km^2), and no stream above Strahler order `r hyd("max_strahler_order")` anywhere in the envelope.
+
+```{r terrain-figure, fig.cap = "Terrain of Amaka and its surroundings: streams (Strahler order), topographic wetness index, slope and elevation. Red dots are the three pans with coordinates inside the frame."}
+fg("fig_terrain.png")
+```
+
+**Stream threshold.** The brief starts at 1,000 upslope cells and asks for calibration. The threshold chosen is `r f0(Cfg.Stream.Threshold)` cells (`r f1(Cal$upslope_km2[Cal$threshold_cells == Cfg.Stream.Threshold])` km^2): the sparsest network that still puts all four dams on a stream (median distance 0 m, at most `r f0(Cal$pan_max_dist_m[Cal$threshold_cells == Cfg.Stream.Threshold])` m) and keeps most of the dry-season greenness contrast between stream corridors and their surroundings. At 5,000 cells only three dams fall on a stream.
+
+```{r calib-figure, fig.cap = "Stream-threshold calibration. The dashed line marks the threshold used."}
+fg("03_stream_calibration.png")
+```
+
+# Vegetation, climate and ecohydrology
+
+## Productivity trend
+
+```{r rpi-maps, fig.cap = "Rangeland Productivity Index now (mean of 2020-2022) and its 2000-2022 trend. Cells are the ~460 m native grid."}
+fg("fig_rpi_maps.png")
+```
+
+```{r rpi-series, fig.cap = "RPI over Amaka, 2000-2022."}
+fg("fig_rpi_series.png")
+```
+
+RPI averages `r f2(tr$mean_all)` over Amaka and shows **no significant trend** (`r f4(tr$sen_slope_per_year)` per year, or `r f2(tr$sen_slope_pct_per_year)`% per year; Mann-Kendall p = `r f2(tr$mk_p)`). The mean of the last three years is `r pc(abs(tr$change_pct), 1)` below the first three, which is within the year-to-year swing set by rainfall. Only `r pc(tr$aoi_cells_degrading_pct, 1)` of cells have a significant downward trend and `r pc(tr$aoi_cells_improving_pct, 1)` an upward one, so the "is degrading" term of the stress index is close to zero everywhere. RPI is a little higher in wetter terrain (`r f2(tb("rpi_by_twi_quintile.csv")$rpi_now[1])` in the driest wetness quintile, `r f2(tb("rpi_by_twi_quintile.csv")$rpi_now[5])` in the wettest).
+
+One caution about RPI itself: year to year it follows MODIS NDVI only weakly over Amaka (r = `r f2(tb("crosscheck_modis_vs_rpi.csv")$pearson[1])`, 22 years), although the spatial pattern of actual GPP agrees closely with NDVI (r = `r f2(tb("crosscheck_modis_vs_rpi.csv")$pearson[5])` across the ranch's cells). Treat RPI as a coarse, ratio-based index.
+
+## Rainfall and drought years
+
+```{r rain-figure, fig.cap = "Seasonal rainfall over Amaka (CHIRPS). Drought and wet years are flagged by the standardised precipitation index (SPI)."}
+fg("fig_rainfall_series.png")
+```
+
+Mean annual rainfall is `r f0(cl("CHIRPS", "rainfall_mm", "ANNUAL", "mean"))` mm (long rains `r f0(cl("CHIRPS", "rainfall_mm", "LR", "mean"))`, short rains `r f0(cl("CHIRPS", "rainfall_mm", "SR", "mean"))`, dry season `r f0(cl("CHIRPS", "rainfall_mm", "DRY", "mean"))` mm), with `r cl("CHIRPS", "rainfall_mm", "ANNUAL", "n_drought_years")` drought years and `r cl("CHIRPS", "rainfall_mm", "ANNUAL", "n_wet_years")` wet years in 25. There is no significant rainfall trend. The short rains vary most (standard deviation `r f0(cl("CHIRPS", "rainfall_mm", "SR", "sd"))` mm).
+
+## Water use and the bare-soil share of evapotranspiration
+
+```{r pml-figure, fig.cap = "Evapotranspiration (ET), gross primary production (GPP) and the soil-evaporation share of ET (Es/ET), dry season against long rains. Each pair shares one colour scale. Cells are PML's 500 m grid."}
+fg("fig_pml_dry_vs_wet.png")
+```
+
+```{r pml-table}
+d <- Pm[match(c("ANNUAL", "LR", "SR", "DRY"), Pm$season), ]
+knitr::kable(data.frame(Season = c("Annual", "Long rains", "Short rains", "Dry"), `ET (mm per day)` = round(d$et_mean, 2), `ET per season (mm)` = round(d$et_mm_per_season), `GPP (gC/m2/day)` = round(d$gpp_mean, 2),
+                        `Es/ET` = round(d$es_frac_mean, 2), `Ec/ET` = round(d$ec_frac_mean, 2), `WUE (gC/mm)` = round(d$wue_mean, 2), check.names = FALSE), caption = "PML-V2 over Amaka, 2001-2020 (daily rates; Es = soil evaporation, Ec = transpiration).")
+```
+
+About `r pc(100 * pm("ANNUAL", "es_frac_mean"))` of the water that evaporates from Amaka comes off bare soil and only `r pc(100 * pm("ANNUAL", "ec_frac_mean"))` passes through plants, as expected for sparse shrubland. Evapotranspiration (`r f0(pm("ANNUAL", "et_mm_per_season"))` mm a year) is about `r pc(100 * pm("ANNUAL", "et_mm_per_season") / cl("CHIRPS", "rainfall_mm", "ANNUAL", "mean"))` of mean rainfall, so little water is left over for runoff on average, and the 10% runoff coefficient used for pan yields later is an assumption, not a measurement.
+
+**Es/ET is highest in the rains, not the dry season** (`r f2(pm("LR", "es_frac_mean"))` in the long rains against `r f2(pm("DRY", "es_frac_mean"))` in the dry season) because wet soil evaporates freely. The dry-season Es/ET is therefore the bare-soil share of the *little* water that moves, not a measure of dryness. Over 2001-2020 only one of twelve PML trends is significant: long-rains ET rose by `r f3(pm("LR", "et_sen"))` mm per day each year (p = `r f3(pm("LR", "et_mk_p"))`). Locally computed PML totals match the Earth Engine totals within 5% (ratios 0.95-1.01), which confirms the units and reducer.
+
+## Land cover, bare soil and greenness
+
+```{r lc-figure, fig.cap = "Land-cover composition of Amaka from the coarse 500 m study pixels and the 10 m WorldCover."}
+fg("fig_landcover_sources.png")
+```
+
+Amaka is `r pc(100 * lc(3, "shrubland"), 1)` shrubland on the 10 m WorldCover, with `r pc(100 * lc(3, "grassland"), 1)` grass, `r pc(100 * lc(3, "trees"), 1)` trees and no bare ground, against 58% shrubland and 4% bare ground in the Kenya-wide baseline. Because of that, **the shrub-to-tree ratio cannot be used**: `r aoi.notree` of `r aoi.cells` cells have under 1% trees, so the ratio is undefined or meaningless almost everywhere. The sterile-landscape flag from the brief (ratio above 5) is therefore not raised on the ranch's own evidence. Bare ground is represented by the Sentinel-2 bare-soil index (BSI) instead.
+
+```{r bsi-figure, fig.cap = "Bare-soil index and NDVI from Sentinel-2 (multi-year means, 10 m), dry season against long rains. Straight-edged patches and lines are visible and look like human land-use or access features rather than natural gradients; they are not interpreted here."}
+fg("fig_bsi_ndvi_seasons.png")
+```
+
+## Riparian corridors
+
+```{r rip-map, fig.cap = "Riparian strips: Strahler order 2 and above, 125 m each side.", out.width = "70%"}
+fg("fig_riparian_map.png")
+```
+
+The riparian strips cover `r f0(rs("order2plus", "area_ha"))` ha (`r pc(rs("order2plus", "pct_of_aoi"), 1)` of the ranch) along `r f1(rs("order2plus", "stream_km_in_aoi"))` km of stream. Relative to the rest of the ranch, they are **modestly greener, wetter and less bare**: dry-season NDVI is `r f3(rc("ndvi_dry", "order2plus", "diff_from_interior"))` higher (`r f2(rc("ndvi_dry", "order2plus", "std_diff_vs_interior"))` ranch standard deviations), the bare-soil index `r f3(abs(rc("bsi_dry", "order2plus", "diff_from_interior")))` lower, with more grass and less shrub. The effect is stronger along the order-3 reaches (NDVI `r f3(rc("ndvi_dry", "order3", "diff_from_interior"))` higher, bare-soil index `r f3(abs(rc("bsi_dry", "order3", "diff_from_interior")))` lower). No stream is above order 3 inside the ranch, and there are no trees in the strips on the 10 m land cover.
+
+```{r rip-contrast, fig.cap = "Riparian strips (order 2 and above) minus the rest of the ranch, in ranch standard deviations. Only the 10-30 m layers can resolve a 250 m strip; the coarse layers are shown because the brief asks for them."}
+fg("fig_riparian_contrast.png")
+```
+
+```{r rip-gradient, fig.cap = "Condition against distance from the nearest order 2 or higher stream."}
+fg("fig_riparian_gradient.png")
+```
+
+The gradient is real but weak: dry-season NDVI falls from `r f2(tb("riparian_gradient.csv")$ndvi_dry[1])` within 60 m of a stream to about `r f2(tb("riparian_gradient.csv")$ndvi_dry[6])` beyond 1 km. The coarse RPI and PML layers cannot resolve the strips (each strip pixel is mostly its surroundings), so the 10-30 m layers carry this section. Rivers are the main baseline attractor for large mammals (Masiaine 2021), so these corridors deserve separate attention even though the contrast is modest.
+
+# Water pans
+
+```{r pan-table}
+P <- Pans |> dplyr::select(pan_id, name, type, status, start_source)
+d <- P |> dplyr::left_join(Ps |> dplyr::select(pan_id, inside_aoi, catch_ha, slope_mean_deg, rpi_now, stream_fed), by = "pan_id")
+knitr::kable(data.frame(Pan = sub("AMK_", "", d$pan_id), Name = d$name, Status = gsub("_", " ", sub("existing_", "", d$status)), `Inside AOI` = ifelse(is.na(d$inside_aoi), NA, ifelse(d$inside_aoi, "yes", "no")),
+                        `Position` = ifelse(d$start_source == "none", "none", sub(" centre", "", d$start_source)), `Catchment (ha)` = ifelse(d$stream_fed %in% TRUE, round(d$catch_ha), NA),
+                        `Mean slope (deg)` = round(d$slope_mean_deg, 1), `RPI now` = round(d$rpi_now, 2), check.names = FALSE),
+             caption = "The five known water structures. HQ reservoir: context disc, not a stream-fed catchment. Slope and RPI are catchment means (the 500 m disc for the HQ reservoir).")
+```
+
+## Catchments
+
+Each stream-fed dam was snapped to the stream network (the three dams moved `r f0(min(Ps$snap_moved_m[Ps$stream_fed %in% TRUE]))`-`r f0(max(Ps$snap_moved_m[Ps$stream_fed %in% TRUE]))` m) and its upslope catchment delineated. The brief snaps every pan; here the HQ rock-catchment reservoir is not, because snapping it onto the nearest channel hands it a river basin of more than 13,000 ha that says nothing about what fills it. It gets a 500 m context disc instead. All per-season catchment metrics (GPP, ET, Es/ET, WUE, rainfall, soil moisture, land-surface temperature) are in `outputs/tables/pan_catchment_metrics.csv` and `.xlsx`.
+
+```{r pan-p01, fig.cap = "Mickles 2 dam (AMK_P01) and its catchment. Dashed line: the Amaka boundary.", out.width = "75%"}
+fg("fig_pan_AMK_P01.png")
+```
+
+```{r pan-p02, fig.cap = "HQ rock-catchment reservoir (AMK_P02): the 500 m context disc. The position sits on a mapped channel.", out.width = "75%"}
+fg("fig_pan_AMK_P02.png")
+```
+
+```{r pan-p03, fig.cap = "Mickles 1 dam (AMK_P03) and its catchment. The dam is outside the Amaka polygon.", out.width = "75%"}
+fg("fig_pan_AMK_P03.png")
+```
+
+```{r pan-p04, fig.cap = "The working dam under heavy pressure (AMK_P04) and its catchment. The dam is outside the Amaka polygon.", out.width = "75%"}
+fg("fig_pan_AMK_P04.png")
+```
+
+## Why the degraded pans may be failing
+
+The brief asks for four failure hypotheses, ranked by the evidence. Each score is the normal distribution function of the catchment's difference from the ranch mean, measured in the spread of catchment-sized windows of the ranch (so a 560 ha catchment is compared with 560 ha windows, not single cells): 0.5 is typical, 1 is extreme. The working dam goes through the same tests as a control, because a hypothesis that the working dam also "fails" cannot explain a failure.
+
+```{r hyp-table}
+rows <- lapply(Dg$pan_id[Dg$diagnosis_type == "failure-mode hypotheses (ranked)"], function(id) {
+  r <- Dg[Dg$pan_id == id, ]
+  data.frame(Pan = paste0(r$name, " (", sub("AMK_", "", id), ")"), Rank = 1:4, Hypothesis = unlist(r[paste0("rank", 1:4)]) |> sub(pattern = "^H[0-9] ", replacement = ""),
+             Score = round(unlist(r[paste0("rank", 1:4, "_score")]), 2), `Working dam` = round(unlist(r[paste0("rank", 1:4, "_functional_control")]), 2), check.names = FALSE)
+})
+knitr::kable(do.call(rbind, rows), row.names = FALSE, caption = "Failure-mode hypotheses ranked by satellite evidence (0.5 = typical of the ranch).")
+```
+
+```{r hyp-figure, fig.cap = "Hypothesis scores for the degraded stream-fed pans. Diamonds mark the working dam on the same test."}
+fg("fig_hypotheses.png")
+```
+
+```{r hyp-text, results = "asis"}
+for (id in Dg$pan_id[Dg$diagnosis_type %in% c("failure-mode hypotheses (ranked)", "not stream-fed: catchment hypotheses not scored")]) cat("- **", Dg$name[Dg$pan_id == id], ":** ", Dg$summary[Dg$pan_id == id], "\n", sep = "")
+```
+
+Reading these together: Mickles 1 looks like a supply problem (too little catchment), Mickles 2 like a high-energy-runoff problem on steep ground, and the HQ reservoir cannot be judged from satellite data. The fourth hypothesis, terrain geometry, scores low for every pan including the working one, so the slope and position of the dam sites do not stand out as the problem. Because the working dam scores `r f2(hy("AMK_P04", 2))` on the siltation test (higher than Mickles 2), siltation by itself does not separate working from failed dams here.
+
+## The demand on the working dam
+
+```{r demand-text, results = "asis"}
+cat(Dg$summary[Dg$diagnosis_type == "pressure (demand absorbed)"])
+```
+
+```{r gap-figure, fig.cap = "The water gap: the part of Amaka beyond 5 km and beyond 10 km of the only functioning pan. Dashed circles are the 5 and 10 km sheds of that pan."}
+fg("fig_water_gap.png")
+```
+
+```{r gap-table}
+knitr::kable(data.frame(`Radius (km)` = Gap$radius_km, `Reached by the working pan (ha)` = round(Gap$watered_by_functional_ha), `Water gap (ha)` = round(Gap$gap_functional_ha), `Water gap (% of Amaka)` = round(Gap$gap_functional_pct, 1),
+                        `Gap if every pan worked (%)` = round(Gap$gap_any_pan_pct, 1), check.names = FALSE), caption = "Accessibility sheds of the functioning pan over Amaka. The last column counts all four located pans as if they held water.")
+```
+
+The 10-15 km radii are the dry-season reference range for elephants; 5 km is the primary water-gap layer. The working dam is itself outside the polygon, so the pressure it carries is the pressure of the whole ranch plus its neighbours. The distance rasters and the gap at all four radii are in `outputs/rasters/`.
+
+## Refugia value and the desilting baseline
+
+Refugia value (distance from the boundary and from Settled Areas, after Masiaine 2021) is low to moderate for every pan (`r f2(min(Ps$refugia_value))`-`r f2(max(Ps$refugia_value))`). **No road layer is available locally, so the roads term is omitted.** The Tsavo Settled Areas layer meets the Amaka polygon at a corner, so settlement is never far from the ranch's edge.
+
+The desilting dam (AMK_P05) was not reached on the visit and has no coordinates. Its catchment, seasonal metrics and the 6-, 12- and 24-month comparison table cannot be produced until it has some; `outputs/tables/NO_DESILTING_COORDINATES.txt` says so. The satellite metrics are catchment-scale, so they will not change when the silt is moved; what they give is a defensible "before" for vegetation, land cover, Es/ET and soil moisture.
+
+# Fire and woody loss
+
+```{r fire-year, fig.cap = "Burned area, active-fire detections and Hansen tree-cover loss, 2001-2024, for Amaka and its 7 km envelope."}
+fg("09_fire_by_year.png")
+```
+
+```{r fire-map, fig.cap = "Burn count 2001-2024 (500 m) and mature-tree loss pixels (30 m).", out.width = "75%"}
+fg("09_fire_map.png")
+```
+
+Fire is **rare** on Amaka. Inside the ranch, burned area was mapped in `r paste(aoi.burn.yrs, collapse = " and ")` only (`r f0(sum(Fy$burned_ha[Fy$scope == "AOI"]))` ha-years), touching `r pc(aoi.burned.pct)` of the ranch's cells. Nothing has been mapped inside the envelope since 2008. MODIS active-fire detections continue in 2020, 2021 and 2024 without a matching burn scar, which points to small fires or other heat sources below the 500 m burned-area product's reach.
+
+```{r fire-table}
+d <- Fx[Fx$scope %in% c("envelope", "AOI") | grepl("^pan ", Fx$scope), ]
+knitr::kable(data.frame(Area = sub("pan AMK_", "pan ", d$scope), `Mature trees (ha)` = round(d$mature_tree_ha, 1), `Woody-loss pixels` = d$woody_loss_px, `Burned and lost` = d$burned_and_lost_px, `Unburned and lost` = d$unburned_and_lost_px,
+                        `Burned (%)` = round(d$burned_and_lost_pct, 1), `Expected by chance (%)` = round(d$exposed_pixel_year_share_pct, 2), `Loss rate ratio` = round(d$exposure_rate_ratio, 1),
+                        `p` = ifelse(is.na(d$exposure_p), NA, ifelse(d$exposure_p < 0.001, "<0.001", sprintf("%.3f", d$exposure_p))), check.names = FALSE),
+             caption = "Woody (mature-tree) loss against fire, 30 m Hansen pixels against the 500 m burn history. 'Burned' = burned in the loss year or the year before. The loss rate ratio compares exposed with unexposed pixel-years.")
+```
+
+Fire clearly matters *where it occurs*: a mature-tree pixel is lost `r f0(fx("envelope", "exposure_rate_ratio"))` times as often in a year it burns (95% interval `r f0(fx("envelope", "exposure_rr_ci_low"))`-`r f0(fx("envelope", "exposure_rr_ci_high"))`) around Amaka. But because fire is rare, only `r pc(fx("envelope", "burned_and_lost_pct"))` of the loss pixels around Amaka (`r pc(fx("AOI", "burned_and_lost_pct"))` inside it, from just `r fx("AOI", "woody_loss_px")` pixels) coincide with a burn. The rest of the woody loss is **not fire**; this analysis cannot say what it is. Hansen's record shows loss only up to 2014 here, and the ranch holds just `r f0(fx("AOI", "mature_tree_ha"))` ha of mature trees (`r pc(100 * fx("AOI", "mature_tree_ha") / Aoi.ha, 1)` of the ranch), so the whole analysis rests on very little woody cover. Fire and megaherbivores act together on tree mortality (Jones 2025), which is why the two signatures are kept apart; with this little fire, the separation is of limited use on Amaka itself.
+
+# Stress index and recommendation zones
+
+The composite stress index follows the brief: 0.30 x (1 - RPI now) + 0.20 x (RPI degrading) + 0.20 x Es/ET + 0.15 x bare ground + 0.15 x (1 - wetness), each term scaled 0-1 between the 2nd and 98th percentile of the ranch. Bare ground is the Sentinel-2 bare-soil index, and Es/ET and the bare-ground term are specific to each season.
+
+```{r stress-figure, fig.cap = "Stress index for the long rains and the dry season, and their difference (dry minus long rains). Coarse RPI and PML cells are visible as blocks; the 30 m texture comes from the wetness and bare-soil terms."}
+fg("fig_stress.png")
+```
+
+```{r stress-table}
+d <- Tm[Tm$season == "DRY", ]
+knitr::kable(data.frame(Term = c("RPI deficit", "RPI degrading", "Es/ET (dry)", "Bare soil (BSI, dry)", "Wetness deficit"), `Mean contribution` = round(d$weighted_mean, 3), `Share of the spread (%)` = round(d$share_of_sd_pct), check.names = FALSE),
+             caption = "What drives the dry-season stress index inside Amaka: each term's mean contribution to the index and its share of the index's spread.")
+```
+
+The dry-season index has a mean of `r f2(ss("DRY", "aoi_mean"))` and spreads from `r f2(ss("DRY", "p10"))` to `r f2(ss("DRY", "p90"))` (10th to 90th percentile). The dry and long-rains surfaces correlate at `r f2(ss("DRY", "cor_with_LR"))` across the ranch and differ on average by only `r f3(ss("DRY", "aoi_mean") - ss("LR", "aoi_mean"))`, so **the index does not show seasonal amplification** of stress on Amaka. The RPI deficit is the largest single driver. The index is structural (it reads vegetation structure) and daytime-biased; non-structural pathways are more than twice as strong in McCleery 2025, and elephant bulls shift to nocturnal use that satellites miss (Valls-Fox 2018). It is a way to rank places within Amaka, not a measure of herbivore impact.
+
+## Zones
+
+```{r zones-figure, fig.cap = "Recommendation zones. Where zones overlap the map shows B over A over C over E over D-dry over D-wet."}
+fg("fig_zones.png")
+```
+
+```{r zones-table}
+knitr::kable(data.frame(Zone = Zs$zone, `Area (ha)` = round(Zs$overlapping_ha), `% of Amaka` = round(Zs$overlapping_pct_of_aoi, 1), `Left after overlaps (ha)` = round(Zs$exclusive_ha), check.names = FALSE), caption = "Area of each recommendation zone inside Amaka.")
+```
+
+- **Zone A, regeneration feasibility** (`r f0(zs("A", "overlapping_ha"))` ha): wet ground (top-quartile wetness) with top-quartile bare-soil index and a productivity trend that is not declining. This says where regeneration is physically possible, not that it will happen: recruitment is limited by cryptic herbivores, grass competition and abiotic factors whatever the large-herbivore pressure (Jones 2025).
+- **Zone B, catchment interventions** (`r f0(zs("B", "overlapping_ha"))` ha): low-order stream reaches whose upslope area is in the top quartile of stress, within 3 km of a pan or inside a pan catchment. They are the candidates for bunds, sand dams and gully plugs, and they lie along the main drainage line through the west of the ranch.
+- **Zone C, pan protection: none.** No stream-fed pan catchment is both in the top quartile of stress (compared with catchment-sized windows of the ranch) and losing productivity. The working dam's catchment is the most stressed (percentile rank `r f0(Zc$dry_stress_percentile_vs_catchment_sized_windows[Zc$pan_id == "AMK_P04"])` of 100) but its RPI is rising. Every Zone C recommendation would carry the trade-off that excluding large herbivores can release the small mammals that suppress tree recruitment (McCleery 2025); exclusion is never unambiguously positive.
+- **Zone D, large-herbivore comfort:** D-wet (`r f0(zs("D-wet", "overlapping_ha"))` ha) is dense woody cover on wetter-than-median ground wherever it lies; D-dry (`r f0(zs("D-dry", "overlapping_ha"))` ha) is the part within 5 km of the working pan. D-dry is small because the working dam lies outside Amaka.
+- **Zone E, waterless buffer** (`r f0(zs("E", "overlapping_ha"))` ha): farther than 10 km from any working pan, with woody cover and acceptable productivity. **This is waterless mainly because the two failed pans in the south-west do not work, not by design.** Restoring the HQ reservoir alone would put all of it within `r f1(max(e.dist("AMK_P02")))` km of working water (Mickles 2 alone would reach `r pc(100 * mean(e.dist("AMK_P01") <= 5))` of it within 5 km). Deciding whether to keep a waterless buffer there (Valls-Fox 2018; Jones 2025) therefore comes before deciding to restore those pans.
+
+```{r zone-areas, fig.cap = "Area of each recommendation zone inside Amaka."}
+fg("fig_zone_areas.png")
+```
+
+Each pan's woody-sacrifice counter-metric (the mature-tree area and Hansen loss inside its 5 km shed) is in the table below, so the woody-cover cost of water is visible next to the benefit.
+
+```{r zonec-table}
+knitr::kable(data.frame(Pan = sub("AMK_", "", Zc$pan_id), `Dry stress` = round(Zc$stress_DRY, 2), `Percentile vs ranch windows` = round(Zc$dry_stress_percentile_vs_catchment_sized_windows, 1), `RPI slope per year` = round(Zc$rpi_sen_slope, 4),
+                        `Zone C` = ifelse(Zc$zone_C, "yes", "no"), `Mature trees in 5 km shed (ha)` = round(Zc$mature_tree_ha_in_shed), `Hansen loss in shed, 2001-2023 (ha)` = round(Zc$hansen_loss_ha_in_shed_2001_2023, 1),
+                        `Expected loss per decade (ha)` = round(Zc$expected_loss_ha_per_decade, 1), check.names = FALSE), caption = "Zone C test and woody-sacrifice counter-metric per pan.")
+```
+
+# Candidate pan sites
+
+The suitability surface is the brief's weighted sum: 0.25 water gap + 0.20 terrain feasibility + 0.15 large-herbivore comfort + 0.10 refugia + 0.10 woody cover - 0.20 Zone E - 0.10 woody-sacrifice risk - 0.10 proximity to settlement. Three interpretation choices matter. The water-gap term is the brief's yes/no "outside existing sheds" averaged over the four radii (3, 5, 10, 15 km), so a site 12 km from the working pan scores 0.75 rather than 0 or 1. The comfort term is the share of the 5 km neighbourhood that is large-herbivore comfort habitat: read literally, "inside Zone D-dry" would contradict the water-gap term, since D-dry is by definition near *existing* water. And Zone E is a hard exclusion as well as a penalty, as the brief says.
+
+```{r siting-figure, fig.cap = "Candidate pan sites at the brief's 3 km minimum spacing. Suitability is drawn only where a pan is buildable.", out.width = "90%"}
+fg("pan_siting_map.png")
+```
+
+```{r siting-table}
+knitr::kable(data.frame(Site = sub("AMK_", "", Cd$site_id), Longitude = round(Cd$longitude, 4), Latitude = round(Cd$latitude, 4), Suitability = round(Cd$suitability, 2), `Picked in (% of 16 weight variants)` = round(Cd$stability_pct),
+                        `Catchment (ha)` = round(Cd$catchment_ha), `Yield (1000 m3/yr)` = round(Cd$annual_yield_m3 / 1000), `5 km gap covered (ha)` = round(Cd$newly_covered_gap_ha_5km),
+                        `Nearest pan` = paste0(sub("AMK_", "", Cd$nearest_pan_id), " (", round(Cd$nearest_pan_km, 1), " km)"), check.names = FALSE),
+             caption = "Candidate sites (rank order). Yield assumes a runoff coefficient of 0.10; there is no gauge data.")
+```
+
+```{r siting-notes, results = "asis"}
+for (i in seq_len(nrow(Cd))) cat("- **Site ", Cd$rank[i], " (", Cd$site_id[i], "):** ", Cd$rationale[i], ".\n", sep = "")
+```
+
+**How much weight to put on these.** Only `r f0(Cd$eligible_area_ha[1])` ha of Amaka passes the hard rules, so the weights choose among the same few drainage lines; that is why the sites are picked in `r f0(min(Cd$stability_pct))`-`r f0(max(Cd$stability_pct))`% of the weight variants, and it should not be read as confirmation that they are good sites. At 1.5 km spacing the script returns `r nrow(Cd2)` sites (`outputs/tables/candidate_pan_sites_spacing_1500m.csv` and `pan_siting_map_spacing_1500m.png`), but the extra sites cluster on the same channels. Yields are estimates from rainfall times an assumed runoff coefficient. Whether a pan holds water depends on soils and wall design, which satellites cannot see, so every site needs a field visit. **Candidate rows have not been added to `water_pans.csv`**; that happens only when `Cfg.Siting.Append` is set to TRUE after you confirm.
+
+## Build new, or restore what is there?
+
+```{r rehab-table}
+knitr::kable(data.frame(Pan = sub("AMK_", "", Rh$pan_id), Name = Rh$name, `Inside AOI` = ifelse(Rh$inside_aoi, "yes", "no"), `5 km gap covered (ha)` = round(Rh$gap_ha_covered_5km), `10 km gap covered (ha)` = round(Rh$gap_ha_covered_10km),
+                        `New dry-season comfort habitat (ha)` = round(Rh$new_dry_comfort_ha_5km), `Mature trees in 5 km shed (ha)` = round(Rh$mature_tree_ha_in_5km_shed), check.names = FALSE), caption = "What each failed pan would add if it held water, on the same measures as the candidate sites.")
+```
+
+Restoring Mickles 2 or the HQ reservoir would cover `r pc(100 * rh("AMK_P01", "gap_ha_covered_10km") / gp(10, "gap_functional_ha"))` of the 10 km gap and `r pc(100 * rh("AMK_P01", "gap_ha_covered_5km") / gp(5, "gap_functional_ha"))` and `r pc(100 * rh("AMK_P02", "gap_ha_covered_5km") / gp(5, "gap_functional_ha"))` of the 5 km gap, which is what a new site would do. At the 5 km radius the water-gap term is almost the same for any site near the middle of the ranch, so *where* matters less than *whether the structure holds water*.
+
+# Limitations
+
+- **Daytime and structural.** Satellites overpass in daytime, so they miss elephants' nocturnal shifts around cattle (Valls-Fox 2018); the stress index reads vegetation structure only (McCleery 2025). Neither attributes anything to elephants.
+- **No calibration.** There are no exclosures or controlled plots on Amaka or neighbouring ranches, so the satellite signals are uncalibrated; prefer actions that hold up over a wide range of signal error.
+- **Resolution.** RPI (~460 m) and PML (500 m) cannot resolve a 250 m riparian strip or a 5 ha dam catchment. The 30 m DEM is a surface model, so channels under shrub can shift by tens of metres.
+- **Positions.** Pan centres were read from imagery with about 5 m of imagery error and 15 m of reading error, plus the uncertainty of what counts as "the pan" (the HQ reservoir, for one, is about 160 m from the HQ point).
+- **Runoff yields** use an assumed coefficient of 0.10; rainfall comes from CHIRPS (~5 km).
+- **Fire and woody loss** rest on a 500 m burn product against 30 m loss that ends in 2014; the unburned remainder is "not fire", never "elephant".
+- **Human shield.** Distance to Settled Areas is a baseline-condition metric; under acute stress its sign can reverse (Masiaine 2021).
+- **Mega- against large-herbivore attribution.** Some trees are facilitated by large herbivores (Jones 2025), so woody change should not be attributed to elephants alone.
+- **Known data issues.** The night-time land-surface-temperature export is empty (its quality mask was too strict; only day LST is used). SMAP soil moisture is ~9 km, so differences between pans mostly reflect which SMAP pixel they fall in. Details are in `docs/known_issues.md`.
+
+# Decisions and data still needed
+
+1. **Coordinates for the desilting dam (AMK_P05).** Without them there is no baseline.
+2. **Which structure at HQ is the "rock catchment reservoir"?** The round reservoir read from imagery is about 160 m south-west of the HQ point; its position falls on a mapped channel. Confirm what it is and whether it is stream-fed.
+3. **The two boreholes.** The hay-farm borehole (PT01) and the "Amaka" borehole about 270 m from the rock catchment are not in `water_pans.csv`, following your instruction, so they do not count as water in the water-gap analysis. If they work and serve stock or wildlife, add them (type "borehole") and re-run `R/08`, `R/10` and `R/11`; the gap and Zone E will change.
+4. **Roads layer** for the refugia term (none available locally).
+5. **A better boundary,** if one exists. About a fifth of the listed area is missing from the polygon and two dams fall outside it.
+6. **Zone E and the gap radius.** Zone E uses 10 km from the nearest working pan and the primary gap layer uses 5 km; choose by the species and management goal.
+7. **Spacing of candidate sites.** 3 km gives four sites on this ranch; 1.5 km gives eight. Whether to append candidates to `water_pans.csv`.
+8. **PT03 and PT06 share the same latitude seconds** although they are 8.6 km apart; please confirm one of them.
+9. **Night LST export:** patch `gee/04` (separate quality thresholds for day and night) and re-export if night temperatures are wanted. The patch is untested.
+
+# Appendix: how to reproduce
+
+Run the scripts in `R/` in order (`00_setup.R` is sourced by each). None takes more than a few minutes; the siting script, which repeats the site selection 16 times for the weight sensitivity, is the slowest. Parameters (stream threshold, weights, radii, runoff coefficient, zone thresholds) live in `R/00_setup.R`, and the weight version is written into each stress file name.
+
+| Script | Produces |
+|---|---|
+| `01_boundary_prep.R` | boundary, envelope, CRS check |
+| `02_dem_prep.R`, `03_hydrology.R` | DEM, streams, wetness, slope, cell terrain table |
+| `04_rpi_analysis.R` | RPI trend and cell table |
+| `05_pmlv2_ecohydrology.R` | seasonal PML, climate context |
+| `06_landcover_studypixels.R` | land cover, bare soil, shrub-to-tree check |
+| `07_riparian_analysis.R` | riparian strips and gradient |
+| `08_water_pans_analysis.R` | catchments, sheds, water gap, diagnostics, desilting baseline |
+| `09_fire_history.R` | burn history, fire against woody loss |
+| `10_integrated_stress.R` | stress surfaces, zones A-E |
+| `11_pan_siting.R` | suitability, candidate sites |
+| `12_maps_figures.R` | the figures in this report |
+
+```{r session}
+si <- sessionInfo(); cat("R", paste(si$R.version$major, si$R.version$minor, sep = "."), "on", si$running, "\n")
+cat("Packages:", paste(sprintf("%s %s", c("sf", "terra", "exactextractr", "whitebox", "tmap", "ggplot2", "trend"), sapply(c("sf", "terra", "exactextractr", "whitebox", "tmap", "ggplot2", "trend"), function(p) as.character(utils::packageVersion(p)))), collapse = "; "), "\n")
+```
