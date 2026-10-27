@@ -39,11 +39,34 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# pkgdown site
-docs/
+# (the template ignored docs/ for pkgdown; this project tracks docs/*.md, so it is NOT ignored)
 
 # translation temp files
 po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# ==============================================================================
+# Amaka pipeline (CLAUDE.md section 5): code, docs and small CSVs only.
+# Raw and derived data stay out of git; folders are kept with .gitkeep.
+# ==============================================================================
+data/**
+!data/
+!data/**/
+!data/**/.gitkeep
+!data/water_pans/water_pans.csv
+!data/water_pans/amaka_field_points.csv
+
+outputs/**
+!outputs/
+!outputs/**/
+!outputs/**/.gitkeep
+
+# rasters / archives / spatial exports wherever they land
+*.tif
+*.tiff
+*.zip
+*.kml
+*.kmz
+*.xlsx

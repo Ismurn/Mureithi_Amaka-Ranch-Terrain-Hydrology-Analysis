@@ -1,118 +1,112 @@
-# Template Readme for TESS Lab Repositories
+# Amaka Ranch - Terrain, Hydrology & Vegetation Analysis
 
-*This document provides the recommended README template for GitHub repositories accompanying research projects, publications, datasets and software developed within TESS Lab. All public repositories should follow this structure where appropriate to ensure they contain the essential information needed to understand, reproduce and reuse the work.
+This repository contains the R and Google Earth Engine (GEE) code for a terrain, hydrology and vegetation analysis of
+**Amaka Ranch and Conservancy** (Taita-Taveta County, Kenya; catalogued as `MUSAMITI` in the TTWCA ranch shapefile),
+within the Tsavo Conservation Area and the Kasigau Corridor REDD+ project area.
 
----
+Use of this code is licensed under [GNU GPL v3](LICENSE).
 
-# REPLACE WITH PROJECT TITLE
+Contact: Isaac Nduta Mureithi (AWF / OPALS, University of Exeter) - *email to be added*.
 
-
-This repository contains the data and code used to reproduce the analyses, figures and tables presented in:
-
-> Author A., Author B. & Author C. (Year). *Paper title*. Journal. DOI: https://doi.org/...
-
-A permanent version of this repository is archived at [![DOI](https://zenodo.org/badge/DOI/...svg)](...)
-
-Use of this code is licensed under [![Licence: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](...)
-
-Contact Author A. and/or Author B at EMAIL.
-
+Citation: *to be added once a report or paper exists.*
 
 ---
 
 ## Project overview
 
-Provide a brief overview of the project (approximately 2–4 sentences), including the research question or objective, the study system or data, and the purpose of the repository.
+The analysis serves three operational questions, with large herbivores (elephants above all) as the management lens
+and water plus cover as the two ranch-scale levers:
+
+1. **Diagnose** why the existing water structures perform as they do (three that do not hold water for long, one working under heavy dry-season pressure).
+2. **Monitor** the desilting dam now being worked on, by fixing a defensible pre-intervention baseline for a 6 / 12 / 24 month re-run.
+3. **Site** new water pans, ranked with explicit trade-offs, for AWF / TTWCA funding proposals.
+
+Every time-varying dataset is summarised for the **annual**, **long-rains (Mar-May)**, **short-rains (Oct-Dec)** and
+**dry-season (Jun-Sep + Jan-Feb)** windows, so dry-season dynamics are not averaged away.
+
+**Status (2026-10-27): version 1 has been run end to end** on the real data. The Word report is written to
+`outputs/reports/Amaka_Hydro_Veg_Report_v1.docx` (not versioned). Read its first page before using any result: the analysis is a
+satellite screening, the boundary is the coarse TTWCA polygon (20% below the listed size, two of the four located pans fall outside it), there is no ground
+truth, and the desilting dam has no coordinates yet.
+
+The full design brief, decisions and pitfalls are in [`CLAUDE.md`](CLAUDE.md). Differences found between the brief and
+the data on disk, the decisions taken and the findings are logged in [`docs/known_issues.md`](docs/known_issues.md); the
+method is in [`docs/methodology.md`](docs/methodology.md).
 
 ---
 
 ## Repository contents
-Provide a brief description of all key datasets and scripts included in the repository.
 
-### Scripts
-*(It is good practice to number scripts when the workflow is sequential (`01_`, `02_`, `03_`...), unless using [Targets](https://books.ropensci.org/targets/))*
+### R scripts (`R/`) - run in numerical order
+
+*Every script has been written and run on the real data. Parameters live in `00_setup.R`.*
 
 | Script | Description |
-|---------|-------------|
-| *01_download_data.R* | Downloads or imports raw datasets. |
-| *02_preprocess_data.R* | Cleans and prepares datasets for analysis. |
-| *03_train_models.R* | Fits statistical or machine learning models. |
-| *04_validation.R* | Performs model validation and accuracy assessment. |
-| *05_generate_figures.R* | Produces all manuscript figures. |
-| *06_tables.R* | Produces manuscript tables and supplementary outputs. |
+|---|---|
+| *00_setup.R* | Packages, local paths, run configuration (`Cfg.*`), season helpers, shared helpers (`read_pans()`, `get_analysis_grid()`, `zonal_stat()`, `scale_ref()`...), WhiteboxTools. Sourced by every other script. |
+| *01_boundary_prep.R* | Verifies the shapefile CRS, builds the AOI (the TTWCA Musamiti polygon as delivered, or a supplied boundary file; `Cfg.AOI.Mode`), builds the 7 km catchment envelope, writes context layers and the GEE boundary. |
+| *02_dem_prep.R* | Ingests the GEE DEM, reprojects, clips to the envelope, QA, compares with the phone altitudes at the field points. |
+| *03_hydrology.R* | WhiteboxTools breach, D8 / D-infinity flow routing, streams (threshold calibrated), TWI, slope, TPI, Strahler order, cell terrain table. |
+| *04_rpi_analysis.R* | RPI zonal statistics, Theil-Sen / Mann-Kendall trends, degrading cells, MODIS cross-check. |
+| *05_pmlv2_ecohydrology.R* | Seasonal GPP, ET components, Es/ET, WUE; rainfall, drought years (SPI), SMAP, LST, MODIS context. |
+| *06_landcover_studypixels.R* | Within-ranch land cover from 10 m WorldCover + Sentinel-2; shrub-to-tree check; bare-and-wet flag. The 500 m study pixels are the Kenya-wide baseline only. |
+| *07_riparian_analysis.R* | Riparian corridor condition and the distance-to-stream gradient. |
+| *08_water_pans_analysis.R* | Pan catchments, accessibility sheds, water gap, refugia value, failure-mode hypotheses, demand on the working dam, desilting baseline (needs coordinates). |
+| *09_fire_history.R* | Burn count and last burn, year-by-year fire, fire against woody loss (timing-aware exposure test). |
+| *10_integrated_stress.R* | Composite stress index (annual, DRY, LR) and recommendation zones A-E. |
+| *11_pan_siting.R* | Suitability surface, candidate sites by non-maximum suppression, weight sensitivity, rehabilitation comparison. |
+| *12_maps_figures.R* | Report figures (tmap + ggplot2). |
+
+### GEE scripts (`gee/`) - run in the Earth Engine Code Editor
+
+*Isaac ran 01-10 and downloaded the exports into* `data/gee_exports/` *(2026-10-27). He ran them as shared, with one saved change (the band naming in gee/10, already in this repository).
+The night-LST export from 04 is empty (`docs/known_issues.md` G7); the script is patched but untested.*
+
+| Script | Exports |
+|---|---|
+| *01_amaka_boundary_export.js* | The Amaka boundary as an EE asset (all other scripts read it). **Run first.** |
+| *02_dem_amaka_export.js* | DEM over the buffered envelope (GLO-30, FABDEM or SRTM). |
+| *03_chirps_rainfall.js* | Seasonal rainfall totals. |
+| *04_modis_lst.js* | Seasonal day / night land-surface temperature. |
+| *05_modis_vi.js* | Seasonal NDVI and EVI (250 m). |
+| *06_sentinel2_vi_ndwi.js* | Seasonal NDVI, NDWI and bare-soil index (10 m). |
+| *07_smap_soilmoisture.js* | Seasonal root-zone and surface soil moisture. |
+| *08_hansen_woodycover.js* | Canopy cover, tree-cover loss, and 10 m WorldCover (the land-cover source). |
+| *09_pmlv2_amaka_export.js* | Seasonal GPP, Ec, Es, Ei (the local PML stack is annual only). |
+| *10_fire_history.js* | Burn count, most recent burn year, burned-by-year, FIRMS counts. |
+
+### Report
+
+`analysis/Amaka_Analysis.Rmd` reads every number from `outputs/` at knit time and knits to `outputs/reports/Amaka_Hydro_Veg_Report_v1.docx`
+(knit it from RStudio, or run it with `RSTUDIO_PANDOC` pointing at RStudio's pandoc folder; `docs/known_issues.md` E6).
 
 ### Data
 
-| File | Description |
-|------|-------------|
-| *field_data.csv* | Field observations used for model calibration. |
-| *training_points.gpkg* | Training dataset. |
-| *validation_points.gpkg* | Independent validation dataset. |
+Nothing under `data/` or `outputs/` is versioned (except `data/water_pans/water_pans.csv`, `data/water_pans/amaka_field_points.csv` and `.gitkeep` placeholders).
+Local inputs live on OneDrive and are declared in `R/00_setup.R`; they are catalogued in
+[`docs/data_sources.md`](docs/data_sources.md).
 
-If datasets cannot be shared openly, explain why.
+| File | Description |
+|---|---|
+| *data/water_pans/water_pans.csv* | The five known pans (three degraded, one working under pressure, one being desilted without coordinates). Candidate sites are appended only on Isaac's confirmation (`Cfg.Siting.Append`). Schema in `CLAUDE.md` 3.3 plus `field_id`. |
+| *data/water_pans/amaka_field_points.csv* | Points from the field visit (GPS, elevation, notes, proposed pan status) and the dam centres read from imagery. |
 
 ---
 
 ## Getting started
 
-Clone this repository and review the project overview and repository structure before running the analysis. 
-
-TESS Lab projects typically use [renv](https://rstudio.github.io/renv/) to record package dependencies and software versions. 
-Where an renv.lock file is included, restore the project environment before running any analyses:
-```r
-renv::restore()
-```
+Clone the repository, open `research-repository-template.Rproj` in RStudio, and check the paths in Phase 3 of
+`R/00_setup.R` (or set the `AMAKA_DATASETS_DIR` environment variable to the `Datasets_and_Shapefiles` folder).
+Required: R >= 4.4 and the packages listed in `00_setup.R` (installed on first run by `pacman`).
 
 ## Running the analysis
 
-Unless otherwise stated, scripts should be run in numerical order:
+1. `source("R/01_boundary_prep.R")` - writes `data/boundary/`, the CRS check outputs and the GEE boundary block.
+2. **CRS check** (brief 9.1): *done* - confirmed as EPSG:32737 by overlay on imagery (`docs/known_issues.md` C1). To re-check on another machine or with a new boundary, overlay `outputs/figures/crs_check/*.kml` on imagery at zoom 14 or higher; if the file tag is wrong, set `Cfg.Ranches.CRS.Assumed` in `00_setup.R` and re-run step 1.
+3. In the Code Editor: create the asset folder, run and export `gee/01_amaka_boundary_export.js` (instructions in its header), then `gee/02_dem_amaka_export.js` and the seasonal scripts. Save your edited copies back to `gee/`.
+4. Download the Drive exports (`Amaka_GEE_Exports/`) into `data/gee_exports/`.
+5. Run `R/02` to `R/12` in order (each sources `00_setup.R`; none takes more than a few minutes).
+6. Add coordinates for the desilting dam (AMK_P05) to `data/water_pans/water_pans.csv` and re-run `R/08` to write its pre-intervention baseline.
+7. Knit `analysis/Amaka_Analysis.Rmd`.
 
-1. *01_download_data.R*
-2. *02_preprocess_data.R*
-3. *03_train_models.R*
-4. *04_validation.R*
-5. *05_generate_figures.R*
-6. *06_tables.R*
-
----
-
-
-## Recommended practice
-
-- Use consistent directory names (`data`, `scripts`, `outputs`, `docs`) across repositories.
-- Never modify files in (`data/raw/`). Store original input data in (`data/raw/`) and write all intermediate and processed datasets to (`data/processed/`) (or another appropriate output directory).
-- Include a table of every important script and dataset — this is often the most useful part for new users.
-- Include ORCID IDs for repository contributors to improve attribution and researcher traceability.
-- If data cannot be shared (e.g. commercial satellite imagery or confidential field data), explain exactly why and state what substitute or sample data are included instead.
-- Use `renv.lock` to record package dependencies and software versions.
-- Archive a permanent release of the repository (e.g. using Zenodo) and cite the DOI in the associated publication.
-- Include a LICENSE file (we normally use the GNU GPL v3 licence in TESS Lab)
-
-### Optional enhancements
-- It can be very helpful to include workflow visualisations (we often create these in [draw.io](https://app.diagrams.net/))
-- Funding acknowledgement if applicable
-- Italicise filenames in tables and text (a nice touch that improves readability).
-- Project logo
-
----
-
-## Checklist 
- Every repository should include
-
-✔ Clear project title
-
-✔ Short project description (2–4 sentences)
-
-✔ Citation to associated paper/preprint
-
-✔ Repository structure
-
-✔ Complete list of scripts (numbered where execution order matters)
-
-✔ Description of all key input and output datasets
-
-✔ Instructions for reproducing the analysis
-
-✔ Licence
-
-✔ Contact name and email
+If the boundary changes (`Cfg.AOI.Mode <- "file"`), re-run from step 1: the GEE exports cover a 7 km envelope, so they only need repeating if the new boundary leaves it.
