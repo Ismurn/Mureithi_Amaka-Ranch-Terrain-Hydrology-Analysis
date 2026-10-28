@@ -8,8 +8,6 @@ Use of this code is licensed under [GNU GPL v3](LICENSE).
 
 Contact: Isaac Nduta Mureithi (African Wildlife Foundation) - *IMureithi@awf.org*.
 
-Citation: *to be added once a report or paper exists.*
-
 ---
 
 ## Project overview
