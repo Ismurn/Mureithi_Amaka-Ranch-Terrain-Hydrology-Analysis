@@ -4,11 +4,9 @@ This repository contains the R and Google Earth Engine (GEE) code for a terrain,
 **Amaka Ranch and Conservancy** (Taita-Taveta County, Kenya; catalogued as `MUSAMITI` in the TTWCA ranch shapefile),
 within the Tsavo Conservation Area and the Kasigau Corridor REDD+ project area.
 
-Use of this code is licensed under [GNU GPL v3](LICENSE)
+Use of this code is licensed under [GNU GPL v3](LICENSE).
 
 Contact: Isaac Nduta Mureithi (African Wildlife Foundation) - *IMureithi@awf.org*.
-
-Citation: *to be added once a report or paper exists.*
 
 ---
 
