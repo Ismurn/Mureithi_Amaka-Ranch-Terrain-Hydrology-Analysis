@@ -75,7 +75,7 @@ The night-LST export from 04 is empty (`docs/known_issues.md` G7); the script is
 
 ### Report
 
-`analysis/Amaka_Analysis.Rmd` reads every number from `outputs/` at knit time and knits to `outputs/reports/Amaka_Hydro_Veg_Report_v1.docx`
+`scripts/Mureithi_Amaka-Ranch-Terrain&Hydrology-Analysis.Rmd` reads every number from `outputs/` at knit time and knits to `outputs/reports/Amaka_Hydro_Veg_Report_v1.docx`
 (knit it from RStudio, or run it with `RSTUDIO_PANDOC` pointing at RStudio's pandoc folder; `docs/known_issues.md` E6).
 
 ### Data
@@ -93,7 +93,7 @@ Local inputs live on OneDrive and are declared in `R/00_setup.R`; they are catal
 
 ## Getting started
 
-Clone the repository, open `research-repository-template.Rproj` in RStudio, and check the paths in Phase 3 of
+Clone the repository, open `Mureithi_Amaka-Ranch-Terrain-Hydrology-Analysis.Rproj` in RStudio, and check the paths in Phase 3 of
 `R/00_setup.R` (or set the `AMAKA_DATASETS_DIR` environment variable to the `Datasets_and_Shapefiles` folder).
 Required: R >= 4.4 and the packages listed in `00_setup.R` (installed on first run by `pacman`).
 
@@ -105,6 +105,6 @@ Required: R >= 4.4 and the packages listed in `00_setup.R` (installed on first r
 4. Download the Drive exports (`Amaka_GEE_Exports/`) into `data/gee_exports/`.
 5. Run `R/02` to `R/12` in order (each sources `00_setup.R`; none takes more than a few minutes).
 6. Add coordinates for the desilting dam (AMK_P05) to `data/water_pans/water_pans.csv` and re-run `R/08` to write its pre-intervention baseline.
-7. Knit `analysis/Amaka_Analysis.Rmd`.
+7. Knit `scripts/Mureithi_Amaka-Ranch-Terrain&Hydrology-Analysis.Rmd`.
 
 If the boundary changes (`Cfg.AOI.Mode <- "file"`), re-run from step 1: the GEE exports cover a 7 km envelope, so they only need repeating if the new boundary leaves it.

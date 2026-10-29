@@ -1,11 +1,4 @@
 ---
-title: "Mureithi_Amaka-Ranch-Terrain&Hydrology-Analysis"
-author: "Isaac Nduta Mureithi"
-date: "2026-10-26"
-output: html_document
----
-
----
 title: "Amaka Ranch - Terrain, Hydrology & Vegetation Analysis"
 subtitle: "Version 1: what the satellite data say about the water pans, the vegetation, and where new water could go"
 author: "Isaac Nduta Mureithi"
@@ -24,14 +17,25 @@ knit: (function(input, ...) {
 ---
 
 ```{r root, include = FALSE}
+# Find the repository root (the folder that holds R/00_setup.R) from wherever this code runs. Knitting starts in this file's folder, but
+# running chunks by hand from the Console starts at the project root, where ".." is the folder ABOVE the repository.
 # root.dir only takes effect from the NEXT chunk, so it gets a chunk of its own.
-knitr::opts_knit$set(root.dir = normalizePath(".."))   # run from the repository root
+Root.Dir <- local({
+  d <- normalizePath(getwd(), winslash = "/")
+  while (!file.exists(file.path(d, "R", "00_setup.R"))) {
+    if (identical(dirname(d), d)) stop("Repository root (the folder with R/00_setup.R) not found at or above ", getwd(),
+                                       ". Use Session > Set Working Directory > To Project Directory and run again.", call. = FALSE)
+    d <- dirname(d)
+  }
+  d
+})
+knitr::opts_knit$set(root.dir = Root.Dir)
 ```
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 7, out.width = "100%")
 options(knitr.kable.NA = "-")
-source("R/00_setup.R")
+source(file.path(Root.Dir, "R", "00_setup.R"))
 
 # Everything quoted in the text is read from outputs/ at knit time, so the prose cannot drift from the tables.
 tb  <- function(f) readr::read_csv(file.path(Dir.Out.Tables, f), show_col_types = FALSE)

@@ -163,7 +163,7 @@ Existing non-functional pans get the same gap-gain numbers (`rehabilitation_gap_
 ## 14. Figures and report [6.10]
 
 `12_maps_figures.R` builds the report figures with tmap (hillshade underlay) and ggplot2, with stable file names and scico palettes (roma RPI, davos ET, lajolla stress,
-batlow TWI, vik diverging). `analysis/Amaka_Analysis.Rmd` reads every number from `outputs/` at knit time and renders `outputs/reports/Amaka_Hydro_Veg_Report_v1.docx`.
+batlow TWI, vik diverging). `scripts/Mureithi_Amaka-Ranch-Terrain&Hydrology-Analysis.Rmd` reads every number from `outputs/` at knit time and renders `outputs/reports/Amaka_Hydro_Veg_Report_v1.docx`.
 
 ## 15. Interpretation limits to carry into the write-up [9.8-9.12]
 
