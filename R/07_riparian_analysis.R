@@ -1,6 +1,4 @@
-# ==============================================================================
 # 07_riparian_analysis.R  -  Riparian corridor condition
-# ==============================================================================
 # PURPOSE
 #   Buffer streams of Strahler order >= 2 by Cfg.Riparian.m (125 m) and report their vegetation condition
 #   separately from the rest of the ranch: riparian versus interior contrast for every vegetation layer,
@@ -27,7 +25,6 @@
 #     (neighbouring pixels are not independent).
 #   * Within the AOI the extracted network has no order >= 4 stream (known from 03), so the strongest
 #     corridors are order 2 and 3.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
@@ -37,7 +34,7 @@ Streams <- sf::st_read(file.path(Dir.Out.Hydro.Buf, "streams_strahler_utm.shp"),
 Max.Ord <- max(Streams$order)
 
 
-# ---- PHASE 1: Riparian polygons ------------------------------------------------------
+# PHASE 1: Riparian polygons
 log_phase("PHASE 1: riparian polygons")
 
 buf_set <- function(orders) {
@@ -62,7 +59,7 @@ print(as.data.frame(Sets.Tbl |> dplyr::mutate(dplyr::across(where(is.numeric), ~
 write_shp(sf::st_sf(set = "order2plus", geometry = sf::st_sfc(sf::st_union(Sets$order2plus), crs = Cfg.CRS.Metric)), file.path(Dir.Out.Rasters, "riparian_order2plus.shp"))
 
 
-# ---- PHASE 2: Riparian versus interior condition, per layer -------------------------------
+# PHASE 2: Riparian versus interior condition, per layer 
 log_phase("PHASE 2: riparian vs interior condition")
 
 Dir.S2 <- file.path(Dir.Out.Rasters, "s2")
@@ -109,7 +106,7 @@ Show <- Cond |> dplyr::filter(set %in% c("order2plus", "order2", "order3")) |>
 print(as.data.frame(Show), row.names = FALSE)
 
 
-# ---- PHASE 3: Gradient with distance from streams of order >= 2 -----------------------------
+# PHASE 3: Gradient with distance from streams of order >= 2
 log_phase("PHASE 3: distance gradient")
 
 Net2 <- sf::st_union(sf::st_geometry(Streams[Streams$order >= 2, ]))
@@ -128,7 +125,7 @@ print(as.data.frame(Grad |> dplyr::mutate(dplyr::across(where(is.numeric), ~ rou
 print(as.data.frame(Grad.Cor |> dplyr::mutate(spearman_with_distance = round(spearman_with_distance, 3))), row.names = FALSE)
 
 
-# ---- PHASE 4: Mask raster ----------------------------------------------------------------------------
+# PHASE 4: Mask raster
 Dem <- terra::rast(file.path(Dir.DEM, "amaka_dem_utm37s.tif"))
 Mask <- terra::rasterize(terra::vect(sf::st_sf(geometry = sf::st_sfc(sf::st_union(Sets$order2plus), crs = Cfg.CRS.Metric))), terra::crop(Dem, terra::vect(AOI.Sf)), field = 1, background = 0)
 Mask <- terra::mask(Mask, terra::vect(AOI.Sf)); names(Mask) <- "riparian_order2plus"

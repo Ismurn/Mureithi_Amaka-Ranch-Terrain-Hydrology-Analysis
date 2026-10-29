@@ -1,6 +1,4 @@
-# ==============================================================================
 # 12_maps_figures.R  -  Figure factory
-# ==============================================================================
 # PURPOSE
 #   Report-ready maps and charts with stable file names (embedded by analysis/Amaka_Analysis.Rmd): terrain, RPI, dry-season versus
 #   wet-season panels, riparian strips, per-pan catchment maps, the water gap, hypothesis scores, stress and recommendation zones.
@@ -21,11 +19,10 @@
 #   * Maps are cropped to the AOI plus a margin; coarse products (RPI 463 m, PML 500 m) are drawn as the blocks they are.
 #     Stress and zone maps are masked to the AOI because they are scaled against the ranch and mean nothing outside it.
 #   * Dry and wet panels of a variable share one colour scale, so the seasons can be compared by eye.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
-# ---- PHASE 1: Common objects ---------------------------------------------------------------------------------
+# PHASE 1: Common objects 
 log_phase("PHASE 1: common objects")
 Aoi.Sf <- read_aoi(); Aoi.U <- sf::st_union(sf::st_geometry(Aoi.Sf)); Aoi.Vec <- terra::vect(Aoi.Sf)
 Dem <- terra::rast(file.path(Dir.DEM, "amaka_dem_utm37s.tif")); Aoi.Mask <- terra::rasterize(Aoi.Vec, Dem, field = 1)
@@ -68,7 +65,7 @@ theme_amaka <- ggplot2::theme_minimal(base_size = 10) + ggplot2::theme(plot.titl
 wrap <- function(x, width = 95) stringr::str_wrap(x, width)                         # subtitles are long: wrap them so they are not clipped
 
 
-# ---- PHASE 2: Terrain -----------------------------------------------------------------------------------------------
+# PHASE 2: Terrain
 log_phase("PHASE 2: terrain, RPI and seasonal panels")
 build("fig_terrain", {
   Str <- suppressWarnings(sf::st_crop(Streams, Aoi.Bb)); Str$order <- factor(Str$order)
@@ -81,7 +78,7 @@ build("fig_terrain", {
                map_r(Dem, "Elevation (m, GLO-30)", "scico.imola", c(q_aoi(Dem, .01), q_aoi(Dem, .99)), legend = "m")), "fig_terrain.png", 2, 9, 9)
 })
 
-# ---- RPI ------------------------------------------------------------------------------------------------------------------
+#  RPI 
 build("fig_rpi_maps", {
   Rpi <- rep_to_dem(rr("rpi_now.tif")); Sen <- rep_to_dem(rr("rpi_sen_slope.tif"))
   lim.s <- max(abs(c(q_aoi(Sen, .02), q_aoi(Sen, .98)))) * c(-1, 1)
@@ -98,7 +95,7 @@ build("fig_rpi_series", {
   save_gg(p, "fig_rpi_series.png", 8, 4.2)
 })
 
-# ---- PML dry versus wet ----------------------------------------------------------------------------------------------------
+#PML dry versus wet
 build("fig_pml_dry_vs_wet", {
   vars <- list(et = c("ET (mm per day)", "scico.davos"), gpp = c("GPP (gC per m2 per day)", "scico.bamako"), esfrac = c("Soil evaporation share of ET (Es/ET)", "scico.lajolla"))
   maps <- list()
@@ -119,7 +116,7 @@ build("fig_rainfall_series", {
   save_gg(p, "fig_rainfall_series.png", 8, 7)
 })
 
-# ---- Sentinel-2 seasons and land cover ----------------------------------------------------------------------------------------------
+# Sentinel-2 seasons and land cover 
 log_phase("PHASE 3: vegetation, riparian, pans")
 build("fig_bsi_ndvi_seasons", {
   s2 <- function(v, s) terra::rast(file.path(Dir.Out.Rasters, "s2", sprintf("s2_%s_%s_mean.tif", v, s)))
@@ -141,7 +138,7 @@ build("fig_landcover_sources", {
   save_gg(p, "fig_landcover_sources.png", 8, 3.6)
 })
 
-# ---- Riparian ---------------------------------------------------------------------------------------------------------------------------
+# Riparian
 build("fig_riparian_map", {
   Rip <- sf::st_read(file.path(Dir.Out.Rasters, "riparian_order2plus.shp"), quiet = TRUE); Str <- suppressWarnings(sf::st_crop(Streams[Streams$order >= 2, ], Aoi.Bb))
   m <- L.Shade() + tmap::tm_shape(Rip) + tmap::tm_polygons(fill = "#4292c6", fill_alpha = 0.45, col = NA) + tmap::tm_shape(Str) + tmap::tm_lines(col = "#08306b", lwd = 1.4) + L.Aoi() + L.Pans() +
@@ -169,7 +166,7 @@ build("fig_riparian_gradient", {
   save_gg(p, "fig_riparian_gradient.png", 8, 5)
 })
 
-# ---- Water gap and per-pan maps ---------------------------------------------------------------------------------------------------------
+# Water gap and per-pan maps
 build("fig_water_gap", {
   G <- rr("water_gap_all_radii.tif"); gap <- tab("water_gap_summary.csv"); Func <- Pans[Pans$functional, ]
   mk <- function(r.km) {
@@ -207,7 +204,7 @@ build("fig_hypotheses", {
   save_gg(p, "fig_hypotheses.png", 8, 5.5)
 })
 
-# ---- Stress and zones ----------------------------------------------------------------------------------------------------------------------------
+# Stress and zones 
 log_phase("PHASE 4: stress and zones")
 build("fig_stress", {
   Lr <- rr("stress_LR.tif"); Dry <- rr("stress_DRY.tif"); Amp <- rr("stress_amplification_DRY_minus_LR.tif")

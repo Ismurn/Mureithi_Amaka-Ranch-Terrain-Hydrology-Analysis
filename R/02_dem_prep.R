@@ -1,6 +1,4 @@
-# ==============================================================================
 # 02_dem_prep.R  -  Ingest the GEE DEM and clip it to the catchment envelope
-# ==============================================================================
 # PURPOSE
 #   Take the DEM exported by gee/02_dem_amaka_export.js, put it on EPSG:32737,
 #   clip it to the 7 km catchment envelope (NOT to Amaka alone, so upslope
@@ -22,12 +20,11 @@
 #     is written to the log, because it changes TWI and stream extraction.
 #   * GLO-30 is a surface model (it includes tree canopy); FABDEM is the forest-
 #     and building-corrected derivative. Cfg.DEM.Source switches between them.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
 
-# ---- PHASE 1: Locate the GEE export ----------------------------------------
+# PHASE 1: Locate the GEE export 
 log_phase("PHASE 1: locate DEM export")
 
 DEM.Src.Path <- file.path(Dir.GEE.Exports, sprintf("amaka_dem_%s_envelope.tif", Cfg.DEM.Source))
@@ -46,7 +43,7 @@ Amaka.UTM      <- sf::st_read(Path.Amaka.UTM, quiet = TRUE)
 Amaka.Buffer   <- sf::st_read(file.path(Dir.Boundary, sprintf("Amaka_Buffer_%gkm.shp", Cfg.Buffer.m / 1000)), quiet = TRUE)
 
 
-# ---- PHASE 2: Load, reproject, clip ----------------------------------------
+# PHASE 2: Load, reproject, clip
 log_phase("PHASE 2: load, reproject, clip")
 
 DEM.Raw <- terra::rast(DEM.Src.Path)[[1]]
@@ -75,7 +72,7 @@ if (!Covers) {
 DEM.UTM <- terra::crop(DEM.UTM, terra::vect(Amaka.Envelope), snap = "out")
 
 
-# ---- PHASE 3: Quality checks -------------------------------------------------
+# PHASE 3: Quality checks 
 log_phase("PHASE 3: quality checks")
 
 Elev.Stats <- terra::global(DEM.UTM, c("min", "max", "mean", "sd"), na.rm = TRUE)
@@ -88,7 +85,7 @@ if (Elev.Stats$min < -20 || Elev.Stats$max > 2500) {
 }
 
 
-# ---- PHASE 3b: Check against the elevations read off the phone in the field ------
+# PHASE 3b: Check against the elevations read off the phone in the field 
 # A free validation (known_issues F1). The phone's GPS altitude is good to ~10-30 m and GLO-30 is a surface
 # model (canopy included), so only gross disagreement means anything; the table is for the record.
 log_phase("PHASE 3b: DEM versus field elevations")
@@ -117,7 +114,7 @@ if (file.exists(Path.FieldPoints)) {
 }
 
 
-# ---- PHASE 4: Optional smoothing -------------------------------------------
+# PHASE 4: Optional smoothing 
 log_phase("PHASE 4: optional smoothing")
 
 Dem.Out.Path <- file.path(Dir.DEM, "amaka_dem_utm37s.tif")
@@ -134,7 +131,7 @@ if (isTRUE(Cfg.DEM.Smooth)) {
 }
 
 
-# ---- PHASE 5: Write ------------------------------------------------------------
+# PHASE 5: Write
 log_phase("PHASE 5: write DEM and log")
 
 terra::writeRaster(DEM.UTM, Dem.Out.Path, overwrite = TRUE, datatype = "FLT4S",
@@ -159,7 +156,7 @@ readr::write_csv(Dem.Log, file.path(Dir.Out.Tables, "02_dem_prep_log.csv"))
 message("  wrote ", Dem.Out.Path)
 
 
-# ---- PHASE 6: DEM clip map ----------------------------------------------------
+# PHASE 6: DEM clip map 
 log_phase("PHASE 6: DEM clip map")
 
 # Hillshade for the base map only; flow routing stays with WhiteboxTools (4.3).

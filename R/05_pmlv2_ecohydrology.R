@@ -1,6 +1,4 @@
-# ==============================================================================
 # 05_pmlv2_ecohydrology.R  -  PML_V2 ecohydrology: GPP, Ec, Es, Ei, WUE, plus climate context
-# ==============================================================================
 # PURPOSE
 #   Seasonal (LR / SR / DRY) and annual GPP, Ec, Es, Ei from the gee/09 export (calendar-year
 #   seasons, mean daily rates); ET = Ec + Es + Ei; WUE = GPP / ET; Ec/ET and Es/ET (DESCRIPTION.md 6.4).
@@ -30,7 +28,6 @@
 #     when it is limited by soil water. The index uses the dry-season value as specified, but read it as
 #     the bare-soil share of what little water the system moves, not as dryness itself (9.9).
 #   * Night-time LST was exported blank (QC mask too strict, known_issues G7), so only day LST is used.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
@@ -40,7 +37,7 @@ Days <- c(ANNUAL = 365, LR = 92, SR = 92, DRY = 181)
 Vars <- c("gpp", "ec", "es", "ei")
 
 
-# ---- PHASE 1: Load the PML seasonal stacks ---------------------------------------
+# PHASE 1: Load the PML seasonal stacks 
 log_phase("PHASE 1: PML seasonal stacks")
 
 Pml <- lapply(setNames(Seasons.All, Seasons.All), function(s) {
@@ -55,7 +52,7 @@ message(sprintf("  %d seasons x %d variables x %d years (%d-%d), grid %d x %d at
                 terra::ncol(Pml$ANNUAL$gpp), terra::nrow(Pml$ANNUAL$gpp), terra::res(Pml$ANNUAL$gpp)[1]))
 
 
-# ---- PHASE 2: AOI series per season, year and variable -----------------------------
+# PHASE 2: AOI series per season, year and variable 
 log_phase("PHASE 2: AOI zonal series")
 
 Zonal <- dplyr::bind_rows(lapply(Seasons.All, function(s) dplyr::bind_rows(lapply(c(Vars, "et"), function(v) {
@@ -85,7 +82,7 @@ print(as.data.frame(Pml.Summary |> dplyr::select(season, gpp_mean, et_mean, wue_
                       dplyr::mutate(dplyr::across(where(is.numeric), ~ signif(.x, 3)))), row.names = FALSE)
 
 
-# ---- PHASE 3: Unit and reducer check against the local annual stack (9.4) ---------------
+# PHASE 3: Unit and reducer check against the local annual stack (9.4) 
 # The local stack is a SUM of ~45 8-day composites of daily rates over a Sep-Aug year; x 8 gives mm or gC m-2
 # per year. The GEE export is the MEAN daily rate of calendar-year composites; x 365 gives the same quantity.
 # If the two annual totals agree the scale factor (PML_SCALE = 1) and the reducer are right.
@@ -110,7 +107,7 @@ message(sprintf("  GEE / local annual totals, ratio range %.3f-%.3f (about 1 mea
                 min(Check$ratio_gee_over_local), max(Check$ratio_gee_over_local)))
 
 
-# ---- PHASE 4: Multi-year means, rasters and the cell table ----------------------------------
+# PHASE 4: Multi-year means, rasters and the cell table 
 log_phase("PHASE 4: multi-year means and cell table")
 
 Mean.R <- lapply(Seasons.All, function(s) {
@@ -137,7 +134,7 @@ message(sprintf("  AOI cells: Es/ET  ANNUAL %.2f | LR %.2f | SR %.2f | DRY %.2f 
                 mean(Cells.Pml$esfrac_DRY[In.Aoi]), min(Cells.Pml$esfrac_DRY[In.Aoi]), max(Cells.Pml$esfrac_DRY[In.Aoi])))
 
 
-# ---- PHASE 5: Climate context --------------------------------------------------------------------
+# PHASE 5: Climate context 
 log_phase("PHASE 5: climate context")
 
 series_aoi <- function(prefix, dataset, variable) dplyr::bind_rows(lapply(Seasons.All, function(s) {

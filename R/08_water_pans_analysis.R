@@ -1,6 +1,4 @@
-# ==============================================================================
 # 08_water_pans_analysis.R  -  Water-pan catchments and per-pan diagnostics
-# ==============================================================================
 # PURPOSE
 #   Snap each stream-fed pan to the stream network, delineate its upslope catchment, compute seasonal catchment
 #   metrics, accessibility sheds (3 / 5 / 10 / 15 km), the ranch's water gap, refugia value, and the
@@ -45,14 +43,13 @@
 #     Wall integrity, spillway, leakage and sediment depth are invisible to EO.
 #   * Refugia value uses distance to the ranch boundary and to settled areas; there is no local road layer, so the roads
 #     term is omitted (roads_available = FALSE).
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 whitebox::wbt_verbose(FALSE)
 
 Run.Pan.Analysis <- function() {
 
-  # ---- PHASE 1: Pans and inputs ---------------------------------------------------------
+# PHASE 1: Pans and inputs
   log_phase("PHASE 1: pans and inputs")
   Pans.All <- read_pans()
   if (nrow(Pans.All) == 0) {
@@ -76,7 +73,7 @@ Run.Pan.Analysis <- function() {
   one_geom <- function(g) sf::st_sfc(sf::st_geometry(g)[[1]], crs = Cfg.CRS.Metric)      # first geometry as a length-1 sfc
 
 
-  # ---- PHASE 2: Snap, delineate, polygonise ---------------------------------------------------
+# PHASE 2: Snap, delineate, polygonise
   log_phase("PHASE 2: catchments")
   Dir.Pan <- file.path(Dir.Out.Hydro.Buf, "pans"); dir.create(Dir.Pan, showWarnings = FALSE)
   Catch <- list(); Snap <- list(); Ws.R <- list()
@@ -126,7 +123,7 @@ Run.Pan.Analysis <- function() {
   }
 
 
-  # ---- PHASE 3: Rasters used for the catchment metrics -------------------------------------------
+# PHASE 3: Rasters used for the catchment metrics
   log_phase("PHASE 3: metric layers")
   rr <- function(...) terra::rast(file.path(Dir.Out.Rasters, ...))
   Wc <- terra::rast(gee_file("worldcover_2021_envelope"))
@@ -171,7 +168,7 @@ Run.Pan.Analysis <- function() {
   Static$runoff_yield_m3_per_yr <- ifelse(Static$stream_fed, Static$catch_ha * 1e4 * (Static$annual_rainfall_mm / 1000) * Cfg.Runoff.Coef, NA_real_)   # runoff coefficient ASSUMED
 
 
-  # ---- PHASE 4: Distances, sheds, water gap --------------------------------------------------------------
+# PHASE 4: Distances, sheds, water gap
   log_phase("PHASE 4: distances, accessibility sheds and the water gap")
   Settled <- sf::st_union(sf::st_geometry(sf::st_read(file.path(Dir.Boundary.Ctx, "Tsavo_Settled_Areas.shp"), quiet = TRUE)))
   Np <- sf::st_union(c(sf::st_geometry(sf::st_read(file.path(Dir.Boundary.Ctx, "Tsavo_East_NP.shp"), quiet = TRUE)), sf::st_geometry(sf::st_read(file.path(Dir.Boundary.Ctx, "Tsavo_West_NP.shp"), quiet = TRUE))))
@@ -221,7 +218,7 @@ Run.Pan.Analysis <- function() {
   terra::writeRaster(Gap.Main, file.path(Dir.Out.Rasters, "water_gap.tif"), overwrite = TRUE, datatype = "INT1U")
 
 
-  # ---- PHASE 5: Status-specific diagnostics ------------------------------------------------------------------------
+# PHASE 5: Status-specific diagnostics
   log_phase("PHASE 5: diagnostics")
   Grid <- get_analysis_grid(); Cells <- Grid$cells; Grid <- Grid$grid
   Ref <- dplyr::left_join(Cells, readr::read_csv(file.path(Dir.Out.Tables, "cells_terrain.csv"), show_col_types = FALSE), by = "cell_id") |>
@@ -317,7 +314,7 @@ Run.Pan.Analysis <- function() {
   cat("\n"); for (k in seq_len(nrow(Diag))) cat(sprintf("%s [%s]: %s\n", Diag$pan_id[k], Diag$diagnosis_type[k], Diag$summary[k]))
 
 
-  # ---- PHASE 6: Tables and the desilting baseline -------------------------------------------------------------------------------
+# PHASE 6: Tables and the desilting baseline
   log_phase("PHASE 6: outputs and the desilting baseline")
   Long <- dplyr::left_join(Seasonal, Static, by = "pan_id") |> dplyr::left_join(Pans.All[, c("pan_id", "name", "status", "type")], by = "pan_id") |>
     dplyr::relocate(pan_id, name, status, type, season)

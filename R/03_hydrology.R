@@ -1,6 +1,4 @@
-# ==============================================================================
 # 03_hydrology.R  -  WhiteboxTools terrain and flow routing
-# ==============================================================================
 # PURPOSE
 #   Condition the buffered DEM and derive the hydrological layers every later stage
 #   uses: breach, D8 / D-infinity flow, accumulation, streams, Strahler order, specific
@@ -28,13 +26,12 @@
 #     (canopy included): flow paths on the plain are only as good as the DEM and are checked
 #     against imagery in the calibration below.
 #   * Flow routing is done by WhiteboxTools only (4.3); terra is used for masking and distances.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 whitebox::wbt_verbose(FALSE)
 
 
-# ---- PHASE 1: Inputs and helpers --------------------------------------------
+# PHASE 1: Inputs and helpers
 log_phase("PHASE 1: inputs")
 
 Dem.Path <- file.path(Dir.DEM, "amaka_dem_utm37s.tif")
@@ -56,7 +53,7 @@ ext1 <- function(r, xy) { v <- terra::extract(r, xy); v[[ncol(v)]] }  # values o
 message(sprintf("  DEM %d x %d cells at %g m | TPI window %d cells", terra::ncol(DEM), terra::nrow(DEM), Cell.m, Win.Cells))
 
 
-# ---- PHASE 2: Conditioning and flow routing ---------------------------------
+# PHASE 2: Conditioning and flow routing 
 # dist = 100 cells (3 km): the farthest a breach path may run to reach a lower cell.
 log_phase("PHASE 2: breach depressions, D8 / D-infinity flow")
 
@@ -76,7 +73,7 @@ message(sprintf("  breaching/filling changed %.1f%% of cells (max lowering %.1f 
                 -terra::global(Breach.Diff, "min", na.rm = TRUE)[[1]], terra::global(Breach.Diff, "max", na.rm = TRUE)[[1]]))
 
 
-# ---- PHASE 3: Terrain attributes (from the ORIGINAL DEM) -------------------------
+# PHASE 3: Terrain attributes (from the ORIGINAL DEM) 
 log_phase("PHASE 3: slope, TWI, TPI, hillshade")
 
 whitebox::wbt_slope(dem = Dem.In, output = wb("slope_deg.tif"), units = "degrees"); need(wb("slope_deg.tif"))
@@ -95,7 +92,7 @@ message(sprintf("  slope: median %.2f deg, 95th %.2f deg | TWI: median %.1f, ran
                 terra::global(Twi.R, "min", na.rm = TRUE)[[1]], terra::global(Twi.R, "max", na.rm = TRUE)[[1]]))
 
 
-# ---- PHASE 4: Stream threshold calibration (DESCRIPTION.md 9.7) ---------------------------
+# PHASE 4: Stream threshold calibration (DESCRIPTION.md 9.7) 
 # The threshold decides what counts as a stream. Three pieces of evidence for each candidate:
 #   (a) the dams: they are built on drainage lines, so the distance from each located pan to the
 #       nearest stream cell should be small;
@@ -145,8 +142,7 @@ message(sprintf("  best-supported threshold by the rule: %d cells (%.2f km2): co
 message("  Cfg.Stream.Threshold (00_setup.R) = ", Cfg.Stream.Threshold, " cells is used for the products below.")
 
 
-# ---- PHASE 5: Streams, Strahler order, vector -------------------------------------------
-log_phase("PHASE 5: streams at the configured threshold")
+# PHASE 5: Streams, Strahler order, vector log_phase("PHASE 5: streams at the configured threshold")
 
 whitebox::wbt_extract_streams(flow_accum = wb("flow_accum_d8.tif"), output = wb("streams.tif"),
                               threshold = Cfg.Stream.Threshold, zero_background = TRUE);                    need(wb("streams.tif"))
@@ -172,7 +168,7 @@ Len.Tbl <- dplyr::full_join(
 print(as.data.frame(Len.Tbl), row.names = FALSE)
 
 
-# ---- PHASE 6: Mask to the AOI for reporting; keep the buffered versions --------------------------
+# PHASE 6: Mask to the AOI for reporting; keep the buffered versions
 log_phase("PHASE 6: AOI-masked copies")
 
 mask_aoi <- function(r) terra::mask(terra::crop(r, AOI.Vec), AOI.Vec)
@@ -186,7 +182,7 @@ for (nm in names(Report.Map)) {
 message("  wrote ", length(Report.Map), " AOI-masked rasters to outputs/rasters/")
 
 
-# ---- PHASE 7: Summary ---------------------------------------------------------------------------
+# PHASE 7: Summary
 log_phase("PHASE 7: summary table")
 
 Aoi.R <- function(name) terra::mask(terra::crop(rd(name), AOI.Vec), AOI.Vec)
@@ -208,7 +204,7 @@ Hydro.Summary <- dplyr::bind_rows(
 readr::write_csv(Hydro.Summary, file.path(Dir.Out.Tables, "03_hydrology_summary.csv"))
 print(as.data.frame(Hydro.Summary), row.names = FALSE)
 
-# ---- PHASE 7b: Cell-level terrain table (keyed on the RPI-native analysis grid) ---------------------------
+# PHASE 7b: Cell-level terrain table (keyed on the RPI-native analysis grid)
 # Fine rasters are aggregated into each ~460 m cell with area-weighted means (no resampling, DESCRIPTION.md 9.2);
 # stream_frac = share of the cell covered by stream cells, acc_max = largest D8 upslope area in the cell.
 log_phase("PHASE 7b: cell-level terrain table")
@@ -229,7 +225,7 @@ message(sprintf("  %d cells; inside the AOI: elevation %.0f-%.0f m, TWI mean %.1
                 100 * mean(Chk$stream_frac > 0)))
 
 
-# ---- PHASE 8: Check figures ----------------------------------------------------------------------
+# PHASE 8: Check figures
 log_phase("PHASE 8: check figures")
 
 Hs.R <- rd("hillshade.tif"); names(Hs.R) <- "shade"

@@ -1,6 +1,4 @@
-# ==============================================================================
 # 11_pan_siting.R  -  Multi-criteria pan siting
-# ==============================================================================
 # PURPOSE
 #   Suitability surface from Cfg.Suit.Weights (DESCRIPTION.md 6.9), then the top Cfg.Siting.N candidate sites by non-maximum
 #   suppression at >= Cfg.Siting.MinSpace.m spacing, each with its catchment, yield, water-gap gain, comfort gain, woody cost,
@@ -38,7 +36,6 @@
 #   * Yield = catchment area x CHIRPS annual rainfall x Cfg.Runoff.Coef (an ASSUMPTION, no gauge data). Whether a pan holds water depends on
 #     soils and wall design, which EO cannot see: every site needs a field visit. The two failed pans in the west are in the same water gap, so
 #     rehabilitation_gap_gain.csv should be read next to the candidates.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 whitebox::wbt_verbose(FALSE)
@@ -47,7 +44,7 @@ Run.Pan.Siting <- function(weights = Cfg.Suit.Weights, n.sites = Cfg.Siting.N, m
   # `tag` is appended to the table and figure names of an alternative run (e.g. relaxed spacing); the rasters, the rehabilitation table and
   # water_pans.csv are only written by the untagged run.
 
-  # ---- PHASE 1: Layers on the 30 m grid ----------------------------------------------------------------
+# PHASE 1: Layers on the 30 m grid
   log_phase("PHASE 1: layers on the 30 m grid")
   nrm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
   Dem <- terra::rast(file.path(Dir.DEM, "amaka_dem_utm37s.tif"))
@@ -84,7 +81,7 @@ Run.Pan.Siting <- function(weights = Cfg.Suit.Weights, n.sites = Cfg.Siting.N, m
                   sum(read_pans()$functional)))
 
 
-  # ---- PHASE 2: Terms and the suitability surface ------------------------------------------------------------
+# PHASE 2: Terms and the suitability surface
   log_phase("PHASE 2: suitability")
   Rad <- Cfg.Siting.Gap.Radii.km
   s.slope <- trapezoid(terra::focal(Slope, w = 5, fun = "mean", na.rm = TRUE), Cfg.Terrain.Slope.Deg)
@@ -126,8 +123,7 @@ Run.Pan.Siting <- function(weights = Cfg.Suit.Weights, n.sites = Cfg.Siting.N, m
   if (!nrow(Sites)) stop("No eligible pixel: relax Cfg.Siting.Min.Terrain or check the zone and terrain layers.", call. = FALSE)
 
 
-  # ---- PHASE 3: Sensitivity to the weights ------------------------------------------------------------------------
-  log_phase("PHASE 3: weight sensitivity (16 runs)")
+# PHASE 3: Sensitivity to the weights  log_phase("PHASE 3: weight sensitivity (16 runs)")
   Runs <- list()
   for (k in names(weights)) for (f in c(0.5, 1.5)) {
     w <- weights; w[[k]] <- w[[k]] * f
@@ -139,7 +135,7 @@ Run.Pan.Siting <- function(weights = Cfg.Suit.Weights, n.sites = Cfg.Siting.N, m
   message("  stability of the baseline sites (% of 16 runs that pick a site within ", min.space.m / 2000, " km): ", paste(sprintf("C%02d %.0f%%", seq_along(stab), stab), collapse = ", "))
 
 
-  # ---- PHASE 4: Attributes of each candidate ------------------------------------------------------------------------
+# PHASE 4: Attributes of each candidate
   log_phase("PHASE 4: candidate attributes")
   Dir.Pan <- file.path(Dir.Out.Hydro.Buf, "pans"); dir.create(Dir.Pan, showWarnings = FALSE)
   Aoi.Px <- which(!is.na(terra::values(Aoi.Mask)[, 1])); Aoi.Xy <- terra::xyFromCell(Aoi.Mask, Aoi.Px)
@@ -211,7 +207,7 @@ Run.Pan.Siting <- function(weights = Cfg.Suit.Weights, n.sites = Cfg.Siting.N, m
   }
 
 
-  # ---- PHASE 5: Map ----------------------------------------------------------------------------------------------------------
+# PHASE 5: Map
   log_phase("PHASE 5: siting map")
   Bb <- sf::st_bbox(c(sf::st_buffer(Aoi.U, 2500), sf::st_buffer(sf::st_geometry(Pans), 1500)))                  # the AOI and every pan with a margin
   Hs <- terra::crop(Hb("hillshade.tif"), terra::ext(Bb[["xmin"]], Bb[["xmax"]], Bb[["ymin"]], Bb[["ymax"]])); names(Hs) <- "shade"
@@ -232,7 +228,7 @@ Run.Pan.Siting <- function(weights = Cfg.Suit.Weights, n.sites = Cfg.Siting.N, m
   message("  wrote ", sprintf("pan_siting_map%s.png", tag))
 
 
-  # ---- PHASE 6: Optional append to water_pans.csv -----------------------------------------------------------------------------
+# PHASE 6: Optional append to water_pans.csv
   if (nzchar(tag)) {
     message("  alternative run '", tag, "': water_pans.csv not touched")
   } else if (isTRUE(Cfg.Siting.Append)) {

@@ -1,6 +1,4 @@
-# ==============================================================================
 # 04_rpi_analysis.R  -  Resilience / performance (RPI) analysis inside Amaka
-# ==============================================================================
 # PURPOSE
 #   Zonal statistics, spatial pattern and pixel-wise Theil-Sen trends of RPI (and of actual and
 #   potential GPP) inside Amaka; flag "degrading" pixels; stratify by TWI quintile; cross-check
@@ -26,12 +24,11 @@
 #   * Land-cover stratification is done in 06 (it needs the 10 m land cover); TWI quintiles are done here.
 #   * RPI is a performance ratio relative to modelled potential GPP: it says how far a pixel is from what
 #     its climate and soil could support, not what caused the gap (9.9: a structural index).
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
 
-# ---- PHASE 1: Inputs on the analysis grid ------------------------------------
+# PHASE 1: Inputs on the analysis grid
 log_phase("PHASE 1: inputs")
 
 Grid.List <- get_analysis_grid(); G <- Grid.List$grid; Cells <- Grid.List$cells
@@ -49,7 +46,7 @@ message(sprintf("  %d RPI layers, %d-%d, %d x %d cells; %d cells inside the AOI"
                 terra::ncol(G), terra::nrow(G), sum(Cells$in_aoi)))
 
 
-# ---- PHASE 2: Zonal statistics inside Amaka, per year ----------------------------
+# PHASE 2: Zonal statistics inside Amaka, per year 
 log_phase("PHASE 2: AOI statistics per year")
 
 zonal_multi <- function(r, label) {
@@ -69,7 +66,7 @@ print(as.data.frame(Zonal.Annual |> dplyr::filter(variable == "rpi", year %in% c
                       dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, 3)))), row.names = FALSE)
 
 
-# ---- PHASE 3: Pixel-wise Theil-Sen trends -----------------------------------------
+# PHASE 3: Pixel-wise Theil-Sen trends
 # trend::sens.slope() per cell through terra::app(); slope = change per year in the layer's own units.
 log_phase("PHASE 3: Theil-Sen trends per cell")
 
@@ -111,7 +108,7 @@ message(sprintf("  AOI cells: RPI_now mean %.3f (range %.3f-%.3f) | Sen slope me
                 100 * mean(Joined$rpi_sen_slope[In.Aoi] > 0 & Joined$rpi_sen_p[In.Aoi] < Cfg.Degrade.P, na.rm = TRUE)))
 
 
-# ---- PHASE 4: AOI-level trend summary --------------------------------------------------
+# PHASE 4: AOI-level trend summary
 log_phase("PHASE 4: AOI-level trends")
 
 series_trend <- function(df, var) {
@@ -134,7 +131,7 @@ print(as.data.frame(Trend.Summary |> dplyr::mutate(dplyr::across(where(is.numeri
 message(sprintf("  potential-GPP model fit inside the AOI: rsq mean %.2f, rmse mean %.3f", mean(Joined$rsq[In.Aoi], na.rm = TRUE), mean(Joined$rmse[In.Aoi], na.rm = TRUE)))
 
 
-# ---- PHASE 5: Stratify by TWI quintile ------------------------------------------------------------
+# PHASE 5: Stratify by TWI quintile
 log_phase("PHASE 5: RPI by TWI quintile")
 
 By.Twi <- Joined[In.Aoi, ] |> dplyr::mutate(twi_q = Cells.Rpi$twi_q[In.Aoi]) |>
@@ -146,7 +143,7 @@ readr::write_csv(By.Twi, file.path(Dir.Out.Tables, "rpi_by_twi_quintile.csv"))
 print(as.data.frame(By.Twi |> dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, 4)))), row.names = FALSE)
 
 
-# ---- PHASE 6: Cross-check against MODIS NDVI / EVI ------------------------------------------------------
+# PHASE 6: Cross-check against MODIS NDVI / EVI 
 # An independent greenness record (250 m, 2001-2024). If RPI and GPP track it, the signal is real.
 log_phase("PHASE 6: cross-check against MODIS")
 
@@ -181,7 +178,7 @@ readr::write_csv(Cross, file.path(Dir.Out.Tables, "crosscheck_modis_vs_rpi.csv")
 print(as.data.frame(Cross |> dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, 3)))), row.names = FALSE)
 
 
-# ---- PHASE 7: Rasters ---------------------------------------------------------------------------------------
+# PHASE 7: Rasters 
 log_phase("PHASE 7: rasters (RPI native grid)")
 
 terra::writeRaster(Rpi.Now,   file.path(Dir.Out.Rasters, "rpi_now.tif"),       overwrite = TRUE)

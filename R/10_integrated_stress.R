@@ -1,6 +1,4 @@
-# ==============================================================================
 # 10_integrated_stress.R  -  Composite stress index and recommendation zones A-E
-# ==============================================================================
 # PURPOSE
 #   Min-max scaled stress index for the ANNUAL, DRY and LR seasons (weights from Cfg.Stress.Weights) and the recommendation
 #   zones of DESCRIPTION.md 6.8: A regeneration feasibility, B catchment interventions, C pan protection, D-wet / D-dry large-
@@ -38,12 +36,11 @@
 #     above the Cfg.Zone.E.Rpi.Q quantile.
 #   * The index is structural only (DESCRIPTION.md 9.9: non-structural pathways are >2x stronger in McCleery 2025) and daytime-biased
 #     (9.8). Zone C never reads as "exclusion is good": the trade-off note travels with every row (McCleery 2025; Jones 2025).
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 whitebox::wbt_verbose(FALSE)
 
-# ---- PHASE 1: Layers on the 30 m grid ------------------------------------------------------------------------
+# PHASE 1: Layers on the 30 m grid
 log_phase("PHASE 1: layers on the 30 m grid")
 nrm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
 Dem <- terra::rast(file.path(Dir.DEM, "amaka_dem_utm37s.tif"))
@@ -69,7 +66,7 @@ message(sprintf("  grid %d x %d cells at %g m; AOI = %s ha (%s pixels)", terra::
                 format(round(sum(!is.na(terra::values(Aoi.Mask))) * Px.ha), big.mark = ","), format(sum(!is.na(terra::values(Aoi.Mask))), big.mark = ",")))
 
 
-# ---- PHASE 2: Scaled terms and the three stress surfaces -------------------------------------------------------------
+# PHASE 2: Scaled terms and the three stress surfaces 
 log_phase("PHASE 2: stress index")
 Scale.Log <- tibble::tibble()
 scale_term <- function(x, label, min.range = 0.01) {                             # scale_ref() against the AOI, logging the limits used
@@ -108,7 +105,7 @@ print(as.data.frame(Term.Tab |> dplyr::mutate(dplyr::across(where(is.numeric), ~
 message(sprintf("  DRY vs LR stress, correlation over the AOI: %.2f; mean amplification (DRY - LR) %+.3f", cor(av(Stress$DRY), av(Stress$LR)), mean(av(Amp))))
 
 
-# ---- PHASE 3: Cell table (RPI grid) ----------------------------------------------------------------------------------
+# PHASE 3: Cell table (RPI grid) 
 log_phase("PHASE 3: cell table")
 Grid <- get_analysis_grid(); Cells <- Grid$cells; Cell.Poly <- cell_polygons(Grid$grid)
 Cs <- zonal_stat(c(Stress$ANNUAL, Stress$DRY, Stress$LR, Amp), Cell.Poly, "mean")
@@ -117,7 +114,7 @@ readr::write_csv(Cells.Stress, file.path(Dir.Out.Tables, "cells_stress.csv"))
 message(sprintf("  %d cells; AOI cells' DRY stress %.3f-%.3f", nrow(Cells.Stress), min(Cells.Stress$stress_DRY[Cells$in_aoi], na.rm = TRUE), max(Cells.Stress$stress_DRY[Cells$in_aoi], na.rm = TRUE)))
 
 
-# ---- PHASE 4: Recommendation zones ------------------------------------------------------------------------------------
+# PHASE 4: Recommendation zones 
 log_phase("PHASE 4: recommendation zones")
 Thr <- c(twi_hi = q_aoi(Twi, Cfg.Relative.Q), twi_med = q_aoi(Twi, 0.5), bsi_dry_hi = q_aoi(Bsi$DRY, Cfg.Relative.Q), rpi_lo = q_aoi(Rpi.Now, Cfg.Zone.E.Rpi.Q))
 message("  relative thresholds (AOI): ", paste(sprintf("%s = %.3f", names(Thr), Thr), collapse = ", "))
@@ -202,7 +199,7 @@ readr::write_csv(Zone.Tab, file.path(Dir.Out.Tables, "recommendation_zone_summar
 print(as.data.frame(Zone.Tab |> dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, 1)))), row.names = FALSE)
 
 
-# ---- PHASE 5: Check figures ----------------------------------------------------------------------------------------------
+# PHASE 5: Check figures 
 log_phase("PHASE 5: check figures")
 Hs <- Hb("hillshade.tif"); names(Hs) <- "shade"
 Ps <- sf::st_geometry(Pans.Sf)

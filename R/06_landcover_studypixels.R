@@ -1,6 +1,4 @@
-# ==============================================================================
 # 06_landcover_studypixels.R  -  Land cover, shrub-to-tree ratio and bare-and-wet flag
-# ==============================================================================
 # PURPOSE
 #   Within-ranch land-cover structure for Amaka. Decision of 2026-10-26: this comes from the 10 m ESA
 #   WorldCover map (class fractions) plus Sentinel-2 (bare-soil index, NDVI, NDWI), NOT from the 500 m
@@ -33,7 +31,6 @@
 #   * The shrub-to-tree ratio is undefined where tree cover is ~0; it is reported only where trees >= 1% of a
 #     cell and paired with an explicit class ("no trees", "shrub-dominated", ...), never divided by zero.
 #   * WorldCover v200 (2021) and the study pixels' v100 (2020) are different classifications.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
@@ -45,7 +42,7 @@ Rpi.Tbl   <- readr::read_csv(file.path(Dir.Out.Tables, "cells_rpi.csv"), show_co
 In.Aoi    <- Cells$in_aoi
 
 
-# ---- PHASE 1: WorldCover class fractions per cell ---------------------------------
+# PHASE 1: WorldCover class fractions per cell 
 log_phase("PHASE 1: WorldCover 10 m class fractions")
 
 Wc <- terra::rast(gee_file("worldcover_2021_envelope"))
@@ -73,7 +70,7 @@ Frac$shrub_tree_class <- dplyr::case_when(
   TRUE                                    ~ "tree-dominated (<1)")
 
 
-# ---- PHASE 2: Sentinel-2 BSI / NDVI / NDWI per cell and season ------------------------
+# PHASE 2: Sentinel-2 BSI / NDVI / NDWI per cell and season
 log_phase("PHASE 2: Sentinel-2 seasonal indices")
 
 S2 <- tibble::tibble(cell_id = Cell.Poly$cell_id)
@@ -92,7 +89,7 @@ S2.Series <- dplyr::bind_rows(S2.Series)
 readr::write_csv(S2.Series, file.path(Dir.Out.Tables, "s2_aoi_series.csv"))
 
 
-# ---- PHASE 3: Does 10 m carry more within-ranch signal than 500 m? (known_issues D5) ----
+# PHASE 3: Does 10 m carry more within-ranch signal than 500 m? (known_issues D5) 
 # Candidate layers for "bare ground" and "woody cover", compared on the AOI cells only. A layer with almost
 # no spread cannot support a min-max-scaled stress term or a relative Zone A threshold.
 log_phase("PHASE 3: within-ranch signal check")
@@ -120,7 +117,7 @@ message(sprintf("  tree cover inside the AOI: study pixels SD %.3f vs WorldCover
                 Signal$sd[Signal$layer == "sp_trees"], Signal$sd[Signal$layer == "wc_trees"]))
 
 
-# ---- PHASE 4: Bare-and-wet flag (Zone A input) ----------------------------------------------------
+# PHASE 4: Bare-and-wet flag (Zone A input)
 # High = top quartile (Cfg.Relative.Q) of the AOI cells; the thresholds come from the AOI and are applied to every
 # cell, so pan catchments that extend beyond the AOI are classified on the same footing.
 log_phase("PHASE 4: bare-and-wet flag")
@@ -138,7 +135,7 @@ message(sprintf("  thresholds from AOI cells: TWI >= %.2f, dry-season BSI >= %.3
 message(sprintf("  correlation of dry-season BSI with TWI inside the AOI: %.2f", cor(Joined$bsi_DRY[In.Aoi], Joined$twi_mean[In.Aoi], use = "complete.obs")))
 
 
-# ---- PHASE 5: Cross-tab, baseline table, rasters -----------------------------------------------------------
+# PHASE 5: Cross-tab, baseline table, rasters
 log_phase("PHASE 5: cross-tab, baseline comparison, rasters")
 
 Cross <- Joined[In.Aoi, ] |>

@@ -1,6 +1,4 @@
-# ==============================================================================
 # 09_fire_history.R  -  Fire history and fire x woody-loss separation
-# ==============================================================================
 # PURPOSE
 #   Burn count and most recent burn year on the 500 m MCD64A1 grid (2001-2024), the year-by-year fire record (burned
 #   area, MODIS active-fire detections) next to Hansen tree-cover loss, and the cross-tab of burned-and-lost versus
@@ -34,11 +32,10 @@
 #     are shown only for contrast: they count losses that happened before the fire.
 #   * Hansen v1.11 loss in this envelope stops in 2014 and MCD64A1 shows no burns in 2009-2020: a short overlap, so every
 #     conclusion here is about 2001-2014.
-# ==============================================================================
 
 if (!exists("Setup.Loaded")) source("R/00_setup.R")
 
-# ---- PHASE 1: Inputs ----------------------------------------------------------
+# PHASE 1: Inputs
 log_phase("PHASE 1: inputs")
 Aoi.Sf  <- read_aoi(); Env.Sf <- read_envelope()
 Burn.Count <- terra::rast(gee_file("burn_count_2001_2024"))                 # 500 m, times burned 2001-2024
@@ -59,7 +56,7 @@ message(sprintf("  years in the exports: %d-%d; Hansen loss years in the envelop
                 min(Yrs), max(Yrs), paste(range(2000 + terra::values(Hansen$lossyear)[terra::values(Hansen$loss)[, 1] %in% 1, 1]), collapse = "-")))
 
 
-# ---- PHASE 2: Burn rasters (500 m) ------------------------------------------------------------
+# PHASE 2: Burn rasters (500 m)
 log_phase("PHASE 2: burn rasters")
 terra::writeRaster(Burn.Count, file.path(Dir.Out.Rasters, "burn_count_2001_2024.tif"), overwrite = TRUE, datatype = "INT1U")
 Last.Na <- terra::ifel(Burn.Last > 0, Burn.Last, NA); names(Last.Na) <- "most_recent_burn_year"
@@ -70,7 +67,7 @@ message(sprintf("  envelope: %d of %d cells burned at least once (%.0f%%), up to
                 sum(terra::values(Burn.Count)[, 1] > 0), terra::ncell(Burn.Count), 100 * mean(terra::values(Burn.Count)[, 1] > 0), max(terra::values(Burn.Count)[, 1])))
 
 
-# ---- PHASE 3: Year-by-year record ------------------------------------------------------------------
+# PHASE 3: Year-by-year record
 log_phase("PHASE 3: year-by-year fire and Hansen loss")
 Tc <- terra::values(Hansen$treecover2000)[, 1]; Loss1 <- terra::values(Hansen$loss)[, 1] %in% 1; Ly <- terra::values(Hansen$lossyear)[, 1]; Ly[is.na(Ly)] <- 0
 mask30 <- function(poly) !is.na(terra::values(terra::rasterize(terra::vect(sf::st_transform(poly, terra::crs(Hansen))), Hansen, field = 1))[, 1])
@@ -95,7 +92,7 @@ message(sprintf("  AOI: burned in %s; active-fire detections in %s; Hansen loss 
                 paste(Aoi.Yr$year[Aoi.Yr$burned_ha > 0], collapse = ", "), paste(Aoi.Yr$year[Aoi.Yr$firms_detections > 0.5], collapse = ", "), paste(Aoi.Yr$year[Aoi.Yr$hansen_loss_ha > 0], collapse = ", ")))
 
 
-# ---- PHASE 4: Burned-and-lost versus unburned-and-lost -----------------------------------------------------------
+# PHASE 4: Burned-and-lost versus unburned-and-lost
 log_phase("PHASE 4: fire x woody-loss cross-tab")
 Xy <- terra::xyFromCell(Hansen, seq_len(terra::ncell(Hansen)))
 Cb <- terra::cellFromXY(Burn.Count, Xy)                                      # the 500 m cell of every 30 m pixel
@@ -160,7 +157,7 @@ print(as.data.frame(Cross |> dplyr::select(scope, mature_tree_ha, woody_loss_px,
                       dplyr::mutate(dplyr::across(where(is.numeric), ~ signif(.x, 3)))), row.names = FALSE)
 
 
-# ---- PHASE 5: Per-cell table (feeds 10 and 11) ------------------------------------------------------------------------------
+# PHASE 5: Per-cell table (feeds 10 and 11)
 log_phase("PHASE 5: cell table")
 Grid <- get_analysis_grid(); Cells <- Grid$cells; Cell.Poly <- cell_polygons(Grid$grid)
 Burn.Samp <- sample_cells(c(Burn.Count, Last.Na), Cells)                    # 500 m layers, point-sampled at the cell centroids
@@ -180,7 +177,7 @@ message(sprintf("  %d cells; inside the AOI: %d burned at least once, %d never; 
                 mean(Cells.Fire$tc2000_mean[In.Aoi], na.rm = TRUE), 100 * mean(Cells.Fire$mature_tree_share[In.Aoi], na.rm = TRUE)))
 
 
-# ---- PHASE 6: Per-pan fire metrics ----------------------------------------------------------------------------------------
+# PHASE 6: Per-pan fire metrics
 log_phase("PHASE 6: per-pan fire metrics")
 if (!is.null(Pc)) {
   Ever.R <- Burn.Count > 0
@@ -197,8 +194,7 @@ if (!is.null(Pc)) {
   print(as.data.frame(Pan.Fire |> dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, 2)))), row.names = FALSE)
 } else message("  skipped (no pan_catchments.shp)")
 
-
-# ---- PHASE 7: Check figures --------------------------------------------------------------------------------------------------
+# PHASE 7: Check figures
 log_phase("PHASE 7: check figures")
 Yr.Long <- Fire.By.Year |>
   tidyr::pivot_longer(c(burned_ha, firms_detections, hansen_loss_ha), names_to = "metric", values_to = "value") |>
